@@ -4,7 +4,7 @@
 
 ## Motivation
 
-Instead of writing programs *as* Gearman workers that speak the Gearman protocol, you can write programs as regular Unix command line programs. `gearcmd` will speak Gearman on behalf of your program and translate it into the standard command line protocol.
+Instead of writing programs *as* [Gearman](http://gearman.org/) workers that speak the [Gearman protocol](http://gearman.org/protocol/), you can write programs as regular Unix command line programs. `gearcmd` will speak Gearman on behalf of your program and translate it into the standard command line protocol.
 
 This allows programs to be easily run locally in a Unix dev environment or in other contexts besides Gearman.
 
