@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/Clever/gearcmd/taskwrapper"
+	"github.com/Clever/gearcmd/gearcmd"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 		os.Exit(3)
 	}
 
-	config := taskwrapper.TaskConfig{FunctionName: *functionName, FunctionCmd: *functionCmd, WarningLines: 5}
+	config := gearcmd.TaskConfig{FunctionName: *functionName, FunctionCmd: *functionCmd, WarningLines: 5}
 	worker := baseworker.NewWorker(*functionName, config.Process)
 	defer worker.Close()
 	log.Printf("Listening for job: " + *functionName)

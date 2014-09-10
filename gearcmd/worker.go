@@ -1,4 +1,4 @@
-package taskwrapper
+package gearcmd
 
 import (
 	"bufio"
@@ -10,7 +10,7 @@ import (
 	"os/exec"
 
 	"github.com/Clever/baseworker-go"
-	"github.com/Clever/baseworker-go/argsparser"
+	"github.com/Clever/gearcmd/argsparser"
 )
 
 // TaskConfig defines the configuration for the task.

@@ -1,4 +1,4 @@
-package taskwrapper
+package gearcmd
 
 import (
 	"io/ioutil"

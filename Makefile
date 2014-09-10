@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 PKG = #github.com/Clever/gearcmd
 SUBPKGS := \
-github.com/Clever/gearcmd/taskwrapper \
+github.com/Clever/gearcmd/gearcmd \
 github.com/Clever/gearcmd/argsparser
 PKGS := $(PKG) $(SUBPKGS)
 
