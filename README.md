@@ -1,6 +1,6 @@
 # gearcmd
 
-`gearcmd` wraps command line programs to turn them into Gearman workers.
+`gearcmd` wraps command line programs and turns them into Gearman workers.
 
 ## Motivation
 
