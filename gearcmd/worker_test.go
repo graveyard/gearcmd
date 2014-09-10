@@ -38,7 +38,6 @@ func TestWorkerRecievesInputData(t *testing.T) {
 }
 
 func TestStderrForwardedToProcess(t *testing.T) {
-	return
 	// This test creates a child process because we want to make sure that the stderr of the worker
 	// process is forwarded to the child process correctly. If we don't create a child process we
 	// end up checking our own process' stderr which is a pain.
