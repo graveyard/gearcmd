@@ -12,7 +12,7 @@ In addition, this decouples your program's process from the Gearman worker's pro
 
 ## Usage
 
-    gearcmd --name <function name> --cmd <command> --gearman-host <host> --gearman-port <port>
+    gearcmd -name <function name> -cmd <command> -gearman-host <host> -gearman-port <port>
 
 Params:
 
@@ -54,7 +54,7 @@ Run a local Gearman server:
 
 Start `gearcmd` and tell it to register itself as a Gearman worker for jobs with function `echo`, and run `my-echo.sh` to process these jobs:
 
-    gearcmd --name echo --cmd my-echo.sh
+    gearcmd -name echo -cmd my-echo.sh
 
 At this point you should be able to submit Gearman jobs. For example, this command:
 
