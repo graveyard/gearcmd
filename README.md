@@ -12,14 +12,14 @@ In addition, this decouples your program's process from the Gearman worker's pro
 
 ## Usage
 
-    gearcmd -name <function name> -cmd <command> -gearman-host <host> -gearman-port <port>
+    gearcmd -name <function name> -cmd <command> -host <host> -port <port>
 
 Params:
 
 - `name`: The name of the Gearman function to listen for
 - `cmd`: The command to run when the wrapper receives a Gearman job
-- `gearman-host` (optional): The Gearman host to connect to. Defaults to `localhost`.
-- `gearman-port` (optional): The Gearman port to connect to. Defaults to `4730`.
+- `host` (optional): The Gearman host to connect to. Defaults to `localhost`.
+- `port` (optional): The Gearman port to connect to. Defaults to `4730`.
 
 ### Command Interface
 

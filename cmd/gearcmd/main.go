@@ -10,9 +10,9 @@ import (
 
 func main() {
 	functionName := flag.String("name", "", "Name of the Gearman function")
-	functionCmd := flag.String("cmd", "", "The cmd to run")
-	gearmanHost := flag.String("gearman-host", "localhost", "The Gearman host")
-	gearmanPort := flag.String("gearman-port", "4730", "The Gearman port")
+	functionCmd := flag.String("cmd", "", "The command to run")
+	gearmanHost := flag.String("host", "localhost", "The Gearman host")
+	gearmanPort := flag.String("port", "4730", "The Gearman port")
 	flag.Parse()
 	if len(*functionName) == 0 {
 		log.Printf("Error: name not defined")
