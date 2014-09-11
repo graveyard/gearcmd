@@ -32,7 +32,7 @@ The command will be given as its arguments the exact arguments passed as the Gea
 - The command's stdout will be emitted as the Gearman worker's `WORK_DATA` events.
 - The last 5 lines of the command's stderr will be emitted as the Gearman worker's `WORK_WARNING` events.
 - If the command has exit code 0, the Gearman worker will emit `WORK_COMPLETE`, otherwise it will emit `WORK_FAIL`.
-- The command's stderr will be logged in `gearcmd`'s stderr.
+- The command's stdout and stderr will be outputted to `gearcmd`'s stdout and stderr respectively.
 
 ### Example
 
