@@ -10,6 +10,10 @@ This allows programs to be easily run locally in a Unix dev environment or in ot
 
 In addition, this decouples your program's process from the Gearman worker's process, ensuring that if your process crashes, the Gearman worker won't, so it will be able to report the crash as a job failure. By default, if a worker crashes, Gearman will silently retry jobs with a new worker without reporting the crash. `gearcmd` ensures that crashes result in loud failures that you can address.
 
+While the [gearman command line tool](http://gearman.info/bin/gearman.html) offers similar functionality, `gearcmd` differs in a few key ways:
+- `gearcmd` lets clients submit different command line flags for each job, while `gearman` passes the job payload through the command's stdin.
+- While both forward the command's stderr to the worker's stderr, `gearcmd` also emits stderr output as worker warnings, allowing clients to receive error information from workers.
+
 ## Usage
 
     gearcmd -name <function name> -cmd <command> -host <host> -port <port>
