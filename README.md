@@ -76,7 +76,6 @@ The release process requires a cross-compilation toolchain.
 [`gox`](https://github.com/mitchellh/gox) can install the toolchain with one command: `gox -build-toolchain`.
 From there you can build release tarballs for different OS and architecture combinations with `make release`.
 
-
 Official releases are listed on the [releases](https://github.com/Clever/gearcmd/releases) page.
 Steps to create an official release:
 
