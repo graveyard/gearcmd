@@ -79,10 +79,10 @@ func streamToGearman(reader io.Reader, job baseworker.Job) error {
 		if n > 0 {
 			job.SendData(buffer[:n])
 		}
-		if err != nil && err != io.EOF {
-			return err
-		} else if err != nil {
+		if err == io.EOF {
 			return nil
+		} else if err != nil {
+			return err
 		}
 	}
 }
