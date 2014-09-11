@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -e
+
+: ${GITHUB_TOKEN?"Need to set GITHUB_TOKEN"}
+: ${GITHUB_REPO_USER?"Need to set GITHUB_REPO_USER"}
+: ${GITHUB_REPO_NAME?"Need to set GITHUB_REPO_NAME"}
+
+# compute version (borrowed from https://github.com/git/git/blob/master/GIT-VERSION-GEN)
+SHA=`git rev-parse HEAD`
+VN=v`cat VERSION`
+git update-index -q --refresh
+CHANGED=$(git diff-index --name-only HEAD --)
+if [ -n "$CHANGED" ]; then
+    echo "dirty working tree, cannot release"
+    exit 1
+fi
+
+# build the files for the release
+make clean
+make -j release
+
+# ensure tag is in github
+curl --fail \
+     --header "Content-Type:application/json" \
+     --header "Authorization:Bearer $GITHUB_TOKEN" \
+     https://api.github.com/repos/$GITHUB_REPO_USER/$GITHUB_REPO_NAME/git/refs/tags/$VN
+
+# create github release for this tag
+echo "creating github release $VN"
+curl --fail -X POST -d '{"tag_name":"'$VN'","target_commitish":"'$SHA'","name":"'$VN'","body":"","draft":false,"prerelease":false}' \
+    --header "Content-Type:application/json" \
+    --header "Authorization:Bearer $GITHUB_TOKEN" \
+    https://api.github.com/repos/$GITHUB_REPO_USER/$GITHUB_REPO_NAME/releases
+
+# associate all files in release/ with this release
+go get github.com/aktau/github-release
+for file in `ls release`; do
+    echo "uploading $file"
+    $GOPATH/bin/github-release upload \
+        --user $GITHUB_REPO_USER \
+        --repo $GITHUB_REPO_NAME \
+        --tag $VN \
+        --name $file \
+        --file release/$file
+done
