@@ -36,11 +36,7 @@ The command will be given as its arguments the exact arguments passed as the Gea
 
 ### Example
 
-This will walk you through running a simple task through `gearcmd`.
-
-First build `gearcmd` and add it to your GOPATH with the command:
-
-    go get github.com/Clever/baseworker-go/cmd/gearcmd`
+This will walk you through running a simple task through `gearcmd`. First, install `gearcmd` as described [below](#Installation).
 
 Then create a bash script, `my-echo.sh`. This will be the command `gearcmd` runs:
 
@@ -67,7 +63,7 @@ should output:
 
 ## Installation
 
-Install from source via `go get github.com/Clever/gearcmd`, or download a release on the [releases](https://github.com/Clever/gearcmd/releases) page.
+Install from source via `go get github.com/Clever/gearcmd/cmd/gearcmd`, or download a release on the [releases](https://github.com/Clever/gearcmd/releases) page.
 
 ## Local Development
 
