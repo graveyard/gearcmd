@@ -1,8 +1,8 @@
 SHELL := /bin/bash
-PKG =
+PKG = github.com/Clever/gearcmd/cmd/gearcmd
 SUBPKGS := \
-github.com/Clever/gearcmd/gearcmd \
-github.com/Clever/gearcmd/argsparser
+github.com/Clever/gearcmd/argsparser \
+github.com/Clever/gearcmd/gearcmd
 PKGS := $(PKG) $(SUBPKGS)
 EXECUTABLE := gearcmd
 BUILDS := \
@@ -39,9 +39,9 @@ version.go: VERSION
 	echo 'const Version = "$(VERSION)"' >> version.go
 
 build/$(EXECUTABLE)-v$(VERSION)-darwin-amd64:
-	GOARCH=amd64 GOOS=darwin go build -o "$@/$(EXECUTABLE)"
+	GOARCH=amd64 GOOS=darwin go build -o "$@/$(EXECUTABLE)" $(PKG)
 build/$(EXECUTABLE)-v$(VERSION)-linux-amd64:
-	GOARCH=amd64 GOOS=linux go build -o "$@/$(EXECUTABLE)"
+	GOARCH=amd64 GOOS=linux go build -o "$@/$(EXECUTABLE)" $(PKG)
 
 %.tar.gz: %
 	tar -C `dirname $<` -zcvf "$<.tar.gz" `basename $<`
