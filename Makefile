@@ -43,6 +43,7 @@ build/$(EXECUTABLE)-v$(VERSION)-darwin-amd64:
 	GOARCH=amd64 GOOS=darwin go build -o "$@/$(EXECUTABLE)" $(PKG)
 build/$(EXECUTABLE)-v$(VERSION)-linux-amd64:
 	GOARCH=amd64 GOOS=linux go build -o "$@/$(EXECUTABLE)" $(PKG)
+build: $(BUILDS)
 
 %.tar.gz: %
 	tar -C `dirname $<` -zcvf "$<.tar.gz" `basename $<`
