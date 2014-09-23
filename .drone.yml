@@ -7,7 +7,18 @@ notify:
       - drone@clever.com
   hipchat:
     room: Clever-Dev-CI
-    token: {{hipchatToken}}
+    token: {{hipchat_token}}
     on_started: true
     on_success: true
     on_failure: true
+publish:
+  github:
+    branch: master
+    script:
+      - make release
+    artifacts:
+      - release
+    tag: v$(cat VERSION)
+    token: {{github_token}}
+    user: Clever
+    repo: gearcmd
