@@ -59,13 +59,15 @@ func (conf TaskConfig) doProcess(job baseworker.Job) ([]byte, error) {
 	go func() {
 		finishedProcessingStdout <- streamToGearman(stdoutReader, job)
 	}()
-	if err := cmd.Run(); err != nil {
-		return nil, err
-	}
+	// Save the cmdErr. We want to process stdout and stderr before we return it
+	cmdErr := cmd.Run()
 	stdoutWriter.Close()
 	sendStderrWarnings(&stderrbuf, job, conf.WarningLines)
-	if err = <-finishedProcessingStdout; err != nil {
-		return nil, err
+	stdoutErr := <-finishedProcessingStdout
+	if cmdErr != nil {
+		return nil, cmdErr
+	} else if stdoutErr != nil {
+		return nil, stdoutErr
 	}
 	return nil, nil
 }
