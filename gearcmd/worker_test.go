@@ -78,3 +78,12 @@ func TestHandleStderrAndStdoutTogether(t *testing.T) {
 	assert.Equal(t, "stderr2", string(lastWarning))
 	assert.Equal(t, "stdout1\nstdout2\n", string(mockJob.OutData()))
 }
+
+func TestStderrCapturedWarningsOnFailedJobs(t *testing.T) {
+	mockJob := mock.CreateMockJob("IgnorePayload")
+	config := TaskConfig{FunctionName: "name", FunctionCmd: "testscripts/logStderrFail.sh", WarningLines: 2}
+	_, err := config.Process(mockJob)
+	assert.Error(t, err)
+	warnings := mockJob.Warnings()
+	assert.Equal(t, warnings, [][]byte{[]byte("stderr7"), []byte("stderr8")})
+}
