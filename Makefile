@@ -19,7 +19,7 @@ $(GOPATH)/bin/golint:
 
 test: $(PKGS)
 
-$(PKGS): $(GOPATH)/bin/golint
+$(PKGS): cmd/gearcmd/version.go $(GOPATH)/bin/golint
 	@go get -d -t $@
 	@gofmt -w=true $(GOPATH)/src/$@*/**.go
 	@echo "LINTING..."
@@ -33,11 +33,11 @@ else
 	@go test $@ -test.v
 endif
 
-build/*: version.go
-version.go: VERSION
-	echo 'package main' > version.go
-	echo '' >> version.go # Write a go file that lints :)
-	echo 'const Version = "$(VERSION)"' >> version.go
+build/*: cmd/gearcmd/version.go
+cmd/gearcmd/version.go: VERSION
+	echo 'package main' > cmd/gearcmd/version.go
+	echo '' >> cmd/gearcmd/version.go # Write a go file that lints :)
+	echo 'const Version = "$(VERSION)"' >> cmd/gearcmd/version.go
 
 build/$(EXECUTABLE)-v$(VERSION)-darwin-amd64:
 	GOARCH=amd64 GOOS=darwin go build -o "$@/$(EXECUTABLE)" $(PKG)
