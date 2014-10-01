@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -14,7 +15,14 @@ func main() {
 	functionCmd := flag.String("cmd", "", "The command to run")
 	gearmanHost := flag.String("host", "localhost", "The Gearman host")
 	gearmanPort := flag.String("port", "4730", "The Gearman port")
+	printVersion := flag.Bool("version", false, "Print the version and exit")
 	flag.Parse()
+
+	if *printVersion {
+		fmt.Println(Version)
+		os.Exit(0)
+	}
+
 	if len(*functionName) == 0 {
 		log.Printf("Error: name not defined")
 		flag.PrintDefaults()
