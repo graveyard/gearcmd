@@ -87,3 +87,11 @@ func TestStderrCapturedWarningsOnFailedJobs(t *testing.T) {
 	warnings := mockJob.Warnings()
 	assert.Equal(t, warnings, [][]byte{[]byte("stderr7"), []byte("stderr8")})
 }
+
+func TestMockJobName(t *testing.T) {
+	mockJob := &mock.MockJob{GearmanHandle: "H:lap:123"}
+	assert.Equal(t, "123", getJobId(mockJob))
+
+	mockJob = &mock.MockJob{GearmanHandle: ""}
+	assert.Equal(t, "", getJobId(mockJob))
+}

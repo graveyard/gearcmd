@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/Clever/baseworker-go"
 	"github.com/Clever/gearcmd/argsparser"
@@ -22,14 +23,20 @@ type TaskConfig struct {
 // Process runs the Gearman job by running the configured task.
 func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	// This wraps the actual processing to do some logging
-	log.Printf("STARTING %s %s %s", conf.FunctionName, job.UniqueId(), string(job.Data()))
+	log.Printf("STARTING %s %s %s", conf.FunctionName, getJobId(job), string(job.Data()))
 	result, err := conf.doProcess(job)
 	if err != nil {
-		log.Printf("ENDING %s %s %s", conf.FunctionName, job.UniqueId(), err.Error())
+		log.Printf("ENDING WITH ERROR %s %s %s", conf.FunctionName, getJobId(job), err.Error())
 	} else {
-		log.Printf("ENDING %s %s", conf.FunctionName, job.UniqueId())
+		log.Printf("ENDING %s %s", conf.FunctionName, getJobId(job))
 	}
 	return result, err
+}
+
+// getJobId returns the jobId from the job handle
+func getJobId(job baseworker.Job) string {
+	splits := strings.Split(job.Handle(), ":")
+	return splits[len(splits)-1]
 }
 
 func (conf TaskConfig) doProcess(job baseworker.Job) ([]byte, error) {
