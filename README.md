@@ -24,6 +24,7 @@ Params:
 - `cmd`: The command to run when the wrapper receives a Gearman job
 - `host` (optional): The Gearman host to connect to. Defaults to `localhost`.
 - `port` (optional): The Gearman port to connect to. Defaults to `4730`.
+- 'parseargs` (optional): If false send the job payload directly to the cmd as its first argument without parsing it 
 
 ### Command Interface
 
