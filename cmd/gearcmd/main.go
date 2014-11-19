@@ -15,6 +15,7 @@ func main() {
 	functionCmd := flag.String("cmd", "", "The command to run")
 	gearmanHost := flag.String("host", "localhost", "The Gearman host")
 	gearmanPort := flag.String("port", "4730", "The Gearman port")
+	parseArgs := flag.Bool("parseargs", true, "If false send the job payload directly to the cmd as its first argument without parsing it")
 	printVersion := flag.Bool("version", false, "Print the version and exit")
 	flag.Parse()
 
@@ -34,7 +35,7 @@ func main() {
 		os.Exit(3)
 	}
 
-	config := gearcmd.TaskConfig{FunctionName: *functionName, FunctionCmd: *functionCmd, WarningLines: 5}
+	config := gearcmd.TaskConfig{FunctionName: *functionName, FunctionCmd: *functionCmd, WarningLines: 5, ParseArgs: *parseArgs}
 	worker := baseworker.NewWorker(*functionName, config.Process)
 	defer worker.Close()
 	log.Printf("Listening for job: " + *functionName)
