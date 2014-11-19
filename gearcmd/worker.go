@@ -18,19 +18,22 @@ import (
 type TaskConfig struct {
 	FunctionName, FunctionCmd string
 	WarningLines              int
+	ParseArgs                 bool
 }
 
 // Process runs the Gearman job by running the configured task.
+// We need to implement the Task interface so we return (byte[], error)
+// though the byte[] is always nil.
 func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	// This wraps the actual processing to do some logging
 	log.Printf("STARTING %s %s %s", conf.FunctionName, getJobId(job), string(job.Data()))
-	result, err := conf.doProcess(job)
+	err := conf.doProcess(job)
 	if err != nil {
 		log.Printf("ENDING WITH ERROR %s %s %s", conf.FunctionName, getJobId(job), err.Error())
 	} else {
 		log.Printf("ENDING %s %s", conf.FunctionName, getJobId(job))
 	}
-	return result, err
+	return nil, err
 }
 
 // getJobId returns the jobId from the job handle
@@ -39,7 +42,7 @@ func getJobId(job baseworker.Job) string {
 	return splits[len(splits)-1]
 }
 
-func (conf TaskConfig) doProcess(job baseworker.Job) ([]byte, error) {
+func (conf TaskConfig) doProcess(job baseworker.Job) error {
 
 	defer func() {
 		// If we panicked then set the panic message as a warning. Gearman-go will
@@ -49,9 +52,16 @@ func (conf TaskConfig) doProcess(job baseworker.Job) ([]byte, error) {
 			job.SendWarning([]byte(err.Error()))
 		}
 	}()
-	args, err := argsparser.ParseArgs(string(job.Data()))
-	if err != nil {
-		return nil, err
+	var args []string
+	var err error
+	if conf.ParseArgs {
+		args, err = argsparser.ParseArgs(string(job.Data()))
+		if err != nil {
+			return err
+		}
+	} else {
+		args = []string{string(job.Data())}
+
 	}
 	cmd := exec.Command(conf.FunctionCmd, args...)
 
@@ -72,11 +82,11 @@ func (conf TaskConfig) doProcess(job baseworker.Job) ([]byte, error) {
 	sendStderrWarnings(&stderrbuf, job, conf.WarningLines)
 	stdoutErr := <-finishedProcessingStdout
 	if cmdErr != nil {
-		return nil, cmdErr
+		return cmdErr
 	} else if stdoutErr != nil {
-		return nil, stdoutErr
+		return stdoutErr
 	}
-	return nil, nil
+	return nil
 }
 
 // This function streams the reader to the Gearman job (through job.SendData())

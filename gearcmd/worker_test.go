@@ -12,8 +12,12 @@ import (
 
 // Helper function to get the response for a job that should be successful
 func getSuccessResponse(payload string, cmd string, t *testing.T) string {
+	config := TaskConfig{FunctionName: "name", FunctionCmd: cmd, WarningLines: 5, ParseArgs: true}
+	return getSuccessResponseWithConfig(payload, config, t)
+}
+
+func getSuccessResponseWithConfig(payload string, config TaskConfig, t *testing.T) string {
 	mockJob := mock.CreateMockJob(payload)
-	config := TaskConfig{FunctionName: "name", FunctionCmd: cmd, WarningLines: 5}
 	_, err := config.Process(mockJob)
 	assert.Nil(t, err)
 	return string(mockJob.OutData())
@@ -56,7 +60,7 @@ func TestStderrForwardedToProcess(t *testing.T) {
 
 func TestStderrCapturedInWarnings(t *testing.T) {
 	mockJob := mock.CreateMockJob("IgnorePayload")
-	config := TaskConfig{FunctionName: "name", FunctionCmd: "testscripts/logStderr.sh", WarningLines: 2}
+	config := TaskConfig{FunctionName: "name", FunctionCmd: "testscripts/logStderr.sh", WarningLines: 2, ParseArgs: true}
 	_, err := config.Process(mockJob)
 	assert.NoError(t, err)
 	warnings := mockJob.Warnings()
@@ -67,7 +71,7 @@ func TestStderrCapturedInWarnings(t *testing.T) {
 
 func TestHandleStderrAndStdoutTogether(t *testing.T) {
 	mockJob := mock.CreateMockJob("IgnorePayload")
-	config := TaskConfig{FunctionName: "name", FunctionCmd: "testscripts/logStdoutAndStderr.sh", WarningLines: 5}
+	config := TaskConfig{FunctionName: "name", FunctionCmd: "testscripts/logStdoutAndStderr.sh", WarningLines: 5, ParseArgs: true}
 	_, err := config.Process(mockJob)
 	assert.NoError(t, err)
 	warnings := mockJob.Warnings()
@@ -81,7 +85,7 @@ func TestHandleStderrAndStdoutTogether(t *testing.T) {
 
 func TestStderrCapturedWarningsOnFailedJobs(t *testing.T) {
 	mockJob := mock.CreateMockJob("IgnorePayload")
-	config := TaskConfig{FunctionName: "name", FunctionCmd: "testscripts/logStderrFail.sh", WarningLines: 2}
+	config := TaskConfig{FunctionName: "name", FunctionCmd: "testscripts/logStderrFail.sh", WarningLines: 2, ParseArgs: true}
 	_, err := config.Process(mockJob)
 	assert.Error(t, err)
 	warnings := mockJob.Warnings()
@@ -94,4 +98,16 @@ func TestMockJobName(t *testing.T) {
 
 	mockJob = &mock.MockJob{GearmanHandle: ""}
 	assert.Equal(t, "", getJobId(mockJob))
+}
+
+func TestRemoveQuotesIfParseArgs(t *testing.T) {
+	response := getSuccessResponse("{\"key\":\"value\"}", "testscripts/echoInput.sh", t)
+	assert.Equal(t, "{key:value}\n\n", response)
+}
+
+func TestNoParse(t *testing.T) {
+	config := TaskConfig{FunctionName: "name", FunctionCmd: "testscripts/echoInput.sh",
+		WarningLines: 5, ParseArgs: false}
+	response := getSuccessResponseWithConfig("{\"key\":\"value\"}", config, t)
+	assert.Equal(t, "{\"key\":\"value\"}\n\n", response)
 }
