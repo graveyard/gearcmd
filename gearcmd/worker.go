@@ -29,9 +29,9 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	log.Printf("STARTING %s %s %s", conf.FunctionName, getJobId(job), string(job.Data()))
 	err := conf.doProcess(job)
 	if err != nil {
-		log.Printf("ENDING WITH ERROR %s %s %s", conf.FunctionName, getJobId(job), err.Error())
+		log.Printf("ENDING WITH ERROR %s %s %s %s", conf.FunctionName, getJobId(job), err.Error(), string(job.Data()))
 	} else {
-		log.Printf("ENDING %s %s", conf.FunctionName, getJobId(job))
+		log.Printf("ENDING %s %s %s", conf.FunctionName, getJobId(job), string(job.Data()))
 	}
 	return nil, err
 }
