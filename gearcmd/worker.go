@@ -12,6 +12,7 @@ import (
 
 	"github.com/Clever/baseworker-go"
 	"github.com/Clever/gearcmd/argsparser"
+	kayvee "github.com/Clever/kayvee-go"
 )
 
 // TaskConfig defines the configuration for the task.
@@ -26,12 +27,17 @@ type TaskConfig struct {
 // though the byte[] is always nil.
 func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	// This wraps the actual processing to do some logging
-	log.Printf("STARTING %s %s %s", conf.FunctionName, getJobId(job), string(job.Data()))
+	log.Printf(kayvee.FormatLog("gearcmd", "info", "START",
+		map[string]interface{}{"function_name": conf.FunctionName, "job_id": getJobId(job), "job_data": string(job.Data())}))
 	err := conf.doProcess(job)
 	if err != nil {
-		log.Printf("ENDING WITH ERROR %s %s %s %s", conf.FunctionName, getJobId(job), err.Error(), string(job.Data()))
+		log.Printf(kayvee.FormatLog("gearcmd", "error", "END_WITH_ERROR",
+			map[string]interface{}{"function_name": conf.FunctionName, "job_id": getJobId(job),
+				"error_message": err.Error(), "job_data": string(job.Data())}))
 	} else {
-		log.Printf("ENDING %s %s %s", conf.FunctionName, getJobId(job), string(job.Data()))
+		log.Printf(kayvee.FormatLog("gearcmd", "info", "END",
+			map[string]interface{}{"function_name": conf.FunctionName, "job_id": getJobId(job),
+				"job_data": string(job.Data())}))
 	}
 	return nil, err
 }
