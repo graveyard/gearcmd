@@ -13,8 +13,8 @@ import (
 func main() {
 	functionName := flag.String("name", "", "Name of the Gearman function")
 	functionCmd := flag.String("cmd", "", "The command to run")
-	gearmanHost := flag.String("host", "localhost", "The Gearman host")
-	gearmanPort := flag.String("port", "4730", "The Gearman port")
+	gearmanHost := flag.String("host", "", "The Gearman host. If not specified the GEARMAN_HOST environment variable will be used.")
+	gearmanPort := flag.String("port", "", "The Gearman port. If not specified the GEARMAN_PORT environment variable will be used.")
 	parseArgs := flag.Bool("parseargs", true, "If false send the job payload directly to the cmd as its first argument without parsing it")
 	printVersion := flag.Bool("version", false, "Print the version and exit")
 	flag.Parse()
@@ -24,15 +24,27 @@ func main() {
 		os.Exit(0)
 	}
 
+	if len(*gearmanHost) == 0 {
+		hostEnv := os.Getenv("GEARMAN_HOST")
+		if len(hostEnv) == 0 {
+			exitWithError("must either specify a host argument or set the GEARMAN_HOST environment variable")
+		}
+		*gearmanHost = hostEnv
+	}
+
+	if len(*gearmanPort) == 0 {
+		portEnv := os.Getenv("GEARMAN_PORT")
+		if len(portEnv) == 0 {
+			exitWithError("must either specify a port argument or set the GEARMAN_PORT environment variable")
+		}
+		*gearmanPort = portEnv
+	}
+
 	if len(*functionName) == 0 {
-		log.Printf("Error: name not defined")
-		flag.PrintDefaults()
-		os.Exit(2)
+		exitWithError("name not defined")
 	}
 	if len(*functionCmd) == 0 {
-		log.Printf("Error: cmd not defined")
-		flag.PrintDefaults()
-		os.Exit(3)
+		exitWithError("cmd not defined")
 	}
 
 	config := gearcmd.TaskConfig{FunctionName: *functionName, FunctionCmd: *functionCmd, WarningLines: 5, ParseArgs: *parseArgs}
@@ -42,4 +54,12 @@ func main() {
 	if err := worker.Listen(*gearmanHost, *gearmanPort); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// exitWithError prints out an error message and exits the process with an exit code of 1
+func exitWithError(errorStr string) {
+	log.Printf("Error: %s", errorStr)
+	flag.PrintDefaults()
+	os.Exit(1)
+
 }
