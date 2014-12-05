@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	mock "github.com/Clever/baseworker-go/mock"
 	"github.com/stretchr/testify/assert"
@@ -63,6 +64,23 @@ func TestStderrCapturedInWarnings(t *testing.T) {
 	config := TaskConfig{FunctionName: "name", FunctionCmd: "testscripts/logStderr.sh", WarningLines: 2, ParseArgs: true}
 	_, err := config.Process(mockJob)
 	assert.NoError(t, err)
+	warnings := mockJob.Warnings()
+	assert.Equal(t, 2, len(warnings))
+	assert.Equal(t, string(warnings[0]), "stderr7")
+	assert.Equal(t, string(warnings[1]), "stderr8")
+}
+
+func TestStderrCapturedWhenHanging(t *testing.T) {
+	mockJob := mock.CreateMockJob("IgnorePayload")
+	config := TaskConfig{
+		FunctionName: "name",
+		FunctionCmd:  "testscripts/stderrAndHang.sh",
+		WarningLines: 2,
+		ParseArgs:    true,
+		CmdTimeout:   time.Second,
+	}
+	_, err := config.Process(mockJob)
+	assert.EqualError(t, err, "process timed out after 1s")
 	warnings := mockJob.Warnings()
 	assert.Equal(t, 2, len(warnings))
 	assert.Equal(t, string(warnings[0]), "stderr7")

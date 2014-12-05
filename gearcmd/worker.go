@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"container/ring"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/Clever/baseworker-go"
 	"github.com/Clever/gearcmd/argsparser"
@@ -20,6 +22,7 @@ type TaskConfig struct {
 	FunctionName, FunctionCmd string
 	WarningLines              int
 	ParseArgs                 bool
+	CmdTimeout                time.Duration
 }
 
 // Process runs the Gearman job by running the configured task.
@@ -76,23 +79,43 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 	// data as necessary.
 	var stderrbuf bytes.Buffer
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrbuf)
+	defer sendStderrWarnings(&stderrbuf, job, conf.WarningLines)
+
 	stdoutReader, stdoutWriter := io.Pipe()
 	cmd.Stdout = io.MultiWriter(os.Stdout, stdoutWriter)
-	finishedProcessingStdout := make(chan error)
+
+	done := make(chan error)
 	go func() {
-		finishedProcessingStdout <- streamToGearman(stdoutReader, job)
+		defer close(done)
+
+		finishedProcessingStdout := make(chan error)
+		go func() {
+			finishedProcessingStdout <- streamToGearman(stdoutReader, job)
+		}()
+
+		// Save the cmdErr. We want to process stdout and stderr before we return it
+		cmdErr := cmd.Run()
+		stdoutWriter.Close()
+
+		stdoutErr := <-finishedProcessingStdout
+		if cmdErr != nil {
+			done <- cmdErr
+		} else if stdoutErr != nil {
+			done <- stdoutErr
+		}
 	}()
-	// Save the cmdErr. We want to process stdout and stderr before we return it
-	cmdErr := cmd.Run()
-	stdoutWriter.Close()
-	sendStderrWarnings(&stderrbuf, job, conf.WarningLines)
-	stdoutErr := <-finishedProcessingStdout
-	if cmdErr != nil {
-		return cmdErr
-	} else if stdoutErr != nil {
-		return stdoutErr
+	// No timeout
+	if conf.CmdTimeout == 0 {
+		// Will be nil if the channel was closed without any errors
+		return <-done
 	}
-	return nil
+	select {
+	case err := <-done:
+		// Will be nil if the channel was closed without any errors
+		return err
+	case <-time.After(conf.CmdTimeout):
+		return fmt.Errorf("process timed out after %s", conf.CmdTimeout.String())
+	}
 }
 
 // This function streams the reader to the Gearman job (through job.SendData())
