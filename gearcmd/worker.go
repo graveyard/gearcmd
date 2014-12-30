@@ -14,7 +14,7 @@ import (
 
 	"github.com/Clever/baseworker-go"
 	"github.com/Clever/gearcmd/argsparser"
-	kayvee "github.com/Clever/kayvee-go"
+	kayvee "gopkg.in/Clever/kayvee-go.v1"
 )
 
 // TaskConfig defines the configuration for the task.
@@ -35,12 +35,12 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	start := time.Now()
 	err := conf.doProcess(job)
 	end := time.Now()
+	durationStr := fmt.Sprintf("%d", int32(end.Sub(start).Seconds() * 1000))
 	if err != nil {
 		log.Printf(kayvee.FormatLog("gearcmd", "error", "END_WITH_ERROR",
 			map[string]interface{}{"function_name": conf.FunctionName, "job_id": getJobId(job),
-				"error_message": err.Error(), "job_data": string(job.Data())}))
+				"error_message": err.Error(), "job_data": string(job.Data()), "duration": durationStr}))
 	} else {
-		durationStr := fmt.Sprintf("%d", int32(end.Sub(start).Seconds() * 1000))
 		log.Printf(kayvee.FormatLog("gearcmd", "info", "END",
 			map[string]interface{}{"function_name": conf.FunctionName, "job_id": getJobId(job),
 				"job_data": string(job.Data()), "duration": durationStr}))
