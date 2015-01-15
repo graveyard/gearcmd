@@ -117,6 +117,9 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 		// Will be nil if the channel was closed without any errors
 		return err
 	case <-time.After(conf.CmdTimeout):
+		if err := cmd.Process.Kill(); err != nil {
+			return fmt.Errorf("process timeout after %s. error: %s", conf.CmdTimeout.String(), err.Error())
+		}
 		return fmt.Errorf("process timed out after %s", conf.CmdTimeout.String())
 	}
 }
