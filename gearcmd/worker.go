@@ -35,7 +35,7 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	start := time.Now()
 	err := conf.doProcess(job)
 	end := time.Now()
-	durationStr := fmt.Sprintf("%d", int32(end.Sub(start).Seconds() * 1000))
+	durationStr := fmt.Sprintf("%d", int32(end.Sub(start).Seconds()*1000))
 	if err != nil {
 		log.Printf(kayvee.FormatLog("gearcmd", "error", "END_WITH_ERROR",
 			map[string]interface{}{"function_name": conf.FunctionName, "job_id": getJobId(job),
@@ -152,7 +152,7 @@ func sendStderrWarnings(buffer io.Reader, job baseworker.Job, warningLines int) 
 	// so that we start at the oldest entry.
 	for i := 0; i < lastStderrLines.Len(); i++ {
 		if lastStderrLines = lastStderrLines.Next(); lastStderrLines.Value != nil {
-			job.SendWarning(lastStderrLines.Value.([]byte))
+			job.SendWarning(append(lastStderrLines.Value.([]byte), byte('\n')))
 		}
 	}
 	return scanner.Err()

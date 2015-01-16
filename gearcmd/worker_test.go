@@ -66,8 +66,8 @@ func TestStderrCapturedInWarnings(t *testing.T) {
 	assert.NoError(t, err)
 	warnings := mockJob.Warnings()
 	assert.Equal(t, 2, len(warnings))
-	assert.Equal(t, string(warnings[0]), "stderr7")
-	assert.Equal(t, string(warnings[1]), "stderr8")
+	assert.Equal(t, string(warnings[0]), "stderr7\n")
+	assert.Equal(t, string(warnings[1]), "stderr8\n")
 }
 
 func TestStderrCapturedWhenHanging(t *testing.T) {
@@ -83,8 +83,8 @@ func TestStderrCapturedWhenHanging(t *testing.T) {
 	assert.EqualError(t, err, "process timed out after 1s")
 	warnings := mockJob.Warnings()
 	assert.Equal(t, 2, len(warnings))
-	assert.Equal(t, string(warnings[0]), "stderr7")
-	assert.Equal(t, string(warnings[1]), "stderr8")
+	assert.Equal(t, string(warnings[0]), "stderr7\n")
+	assert.Equal(t, string(warnings[1]), "stderr8\n")
 }
 
 func TestHandleStderrAndStdoutTogether(t *testing.T) {
@@ -97,7 +97,7 @@ func TestHandleStderrAndStdoutTogether(t *testing.T) {
 		t.Fatal("Empty warnings")
 	}
 	lastWarning := warnings[len(warnings)-1]
-	assert.Equal(t, "stderr2", string(lastWarning))
+	assert.Equal(t, "stderr2\n", string(lastWarning))
 	assert.Equal(t, "stdout1\nstdout2\n", string(mockJob.OutData()))
 }
 
@@ -107,7 +107,7 @@ func TestStderrCapturedWarningsOnFailedJobs(t *testing.T) {
 	_, err := config.Process(mockJob)
 	assert.Error(t, err)
 	warnings := mockJob.Warnings()
-	assert.Equal(t, warnings, [][]byte{[]byte("stderr7"), []byte("stderr8")})
+	assert.Equal(t, warnings, [][]byte{[]byte("stderr7\n"), []byte("stderr8\n")})
 }
 
 func TestMockJobName(t *testing.T) {
