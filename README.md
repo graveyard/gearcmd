@@ -20,12 +20,12 @@ While the [gearman command line tool](http://gearman.info/bin/gearman.html) offe
 
 Params:
 
-- `name`: The name of the Gearman function to listen for
-- `cmd`: The command to run when the wrapper receives a Gearman job
-- `host` (optional): The Gearman host to connect to. Defaults to `$GEARMAN_HOST`
-- `port` (optional): The Gearman port to connect to. Defaults to `$GEARMAN_PORT`
-- `parseargs` (optional): If false send the job payload directly to the cmd as its first argument without parsing it
-- `cmdtimeout` (optional): Maximum time for the command to run before it will be killed, as parsed by [time.ParseDuration](http://golang.org/pkg/time/#ParseDuration) (e.g. `2h`, `30m`, `2h30m`). Defaults to never
+- `name`: The name of the Gearman function to listen for.
+- `cmd`: The command to run when the wrapper receives a Gearman job.
+- `host` (optional): The Gearman host to connect to. Defaults to `$GEARMAN_HOST`.
+- `port` (optional): The Gearman port to connect to. Defaults to `$GEARMAN_PORT`.
+- `parseargs` (optional): If false, send the job payload directly to the cmd as its first argument without parsing it. Requires flag syntax `-parseargs=[true/false]`. It will not work properly without the equal sign.
+- `cmdtimeout` (optional): Maximum time for the command to run before it will be killed, as parsed by [time.ParseDuration](http://golang.org/pkg/time/#ParseDuration) (e.g. `2h`, `30m`, `2h30m`). Defaults to never.
 
 ### Command Interface
 
