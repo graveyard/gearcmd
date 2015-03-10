@@ -30,8 +30,8 @@ type TaskConfig struct {
 // though the byte[] is always nil.
 func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	// This wraps the actual processing to do some logging
-	log.Printf(kayvee.FormatLog("gearcmd", "info", "START",
-		map[string]interface{}{"function_name": conf.FunctionName, "job_id": getJobId(job), "job_data": string(job.Data())}))
+	log.Println(kayvee.FormatLog("gearcmd", "info", "START",
+		map[string]interface{}{"function": conf.FunctionName, "job_id": getJobId(job), "job_data": string(job.Data())}))
 	start := time.Now()
 	err := conf.doProcess(job)
 	end := time.Now()
@@ -40,9 +40,15 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	}
 	if err != nil {
 		data["error_message"] = err.Error()
-		log.Printf(kayvee.FormatLog("gearcmd", "error", "END_WITH_ERROR", data))
+		data["type"] = "gauge"
+		data["value"] = 0
+		data["success"] = false
+		log.Println(kayvee.FormatLog("gearcmd", "error", "END", data))
 	} else {
-		log.Printf(kayvee.FormatLog("gearcmd", "info", "END", data))
+		data["type"] = "gauge"
+		data["value"] = 1
+		data["success"] = true
+		log.Println(kayvee.FormatLog("gearcmd", "info", "END", data))
 		// Hopefully none of our jobs last long enough for a uint64...
 		log.Printf(kayvee.FormatLog("gearcmd", "info", "duration",
 			map[string]interface{}{
