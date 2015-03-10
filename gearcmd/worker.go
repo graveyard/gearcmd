@@ -36,16 +36,15 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	err := conf.doProcess(job)
 	end := time.Now()
 	data := map[string]interface{}{
-		"function": conf.FunctionName, "job_id": getJobId(job), "job_data": string(job.Data()),
+		"function": conf.FunctionName, "job_id": getJobId(job),
+		"job_data": string(job.Data()), "type": "gauge",
 	}
 	if err != nil {
 		data["error_message"] = err.Error()
-		data["type"] = "gauge"
 		data["value"] = 0
 		data["success"] = false
 		log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "END", data))
 	} else {
-		data["type"] = "gauge"
 		data["value"] = 1
 		data["success"] = true
 		log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "END", data))
