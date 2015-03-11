@@ -14,7 +14,7 @@ import (
 
 	"github.com/Clever/baseworker-go"
 	"github.com/Clever/gearcmd/argsparser"
-	"gopkg.in/Clever/kayvee-go.v1"
+	"gopkg.in/Clever/kayvee-go.v2"
 )
 
 // TaskConfig defines the configuration for the task.
@@ -30,21 +30,26 @@ type TaskConfig struct {
 // though the byte[] is always nil.
 func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	// This wraps the actual processing to do some logging
-	log.Printf(kayvee.FormatLog("gearcmd", "info", "START",
-		map[string]interface{}{"function_name": conf.FunctionName, "job_id": getJobId(job), "job_data": string(job.Data())}))
+	log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "START",
+		map[string]interface{}{"function": conf.FunctionName, "job_id": getJobId(job), "job_data": string(job.Data())}))
 	start := time.Now()
 	err := conf.doProcess(job)
 	end := time.Now()
 	data := map[string]interface{}{
-		"function": conf.FunctionName, "job_id": getJobId(job), "job_data": string(job.Data()),
+		"function": conf.FunctionName, "job_id": getJobId(job),
+		"job_data": string(job.Data()), "type": "gauge",
 	}
 	if err != nil {
 		data["error_message"] = err.Error()
-		log.Printf(kayvee.FormatLog("gearcmd", "error", "END_WITH_ERROR", data))
+		data["value"] = 0
+		data["success"] = false
+		log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "END", data))
 	} else {
-		log.Printf(kayvee.FormatLog("gearcmd", "info", "END", data))
+		data["value"] = 1
+		data["success"] = true
+		log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "END", data))
 		// Hopefully none of our jobs last long enough for a uint64...
-		log.Printf(kayvee.FormatLog("gearcmd", "info", "duration",
+		log.Printf(kayvee.FormatLog("gearcmd", kayvee.Info, "duration",
 			map[string]interface{}{
 				"value": uint64(end.Sub(start).Seconds() * 1000),
 				"type":  "gauge", "function": conf.FunctionName,
