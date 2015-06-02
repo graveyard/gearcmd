@@ -18,7 +18,7 @@ func main() {
 	parseArgs := flag.Bool("parseargs", true, "If false send the job payload directly to the cmd as its first argument without parsing it")
 	printVersion := flag.Bool("version", false, "Print the version and exit")
 	cmdTimeout := flag.Duration("cmdtimeout", 0, "Maximum time for the command to run before it will be killed, e.g. 2h, 30m, 2h30m")
-	retryCount := flag.Int("retrycount", 0, "Number of times to retry the job if it fails")
+	retryCount := flag.Int("retry", 0, "Number of times to retry the job if it fails")
 	flag.Parse()
 
 	if *printVersion {
