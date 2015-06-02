@@ -23,6 +23,7 @@ type TaskConfig struct {
 	WarningLines              int
 	ParseArgs                 bool
 	CmdTimeout                time.Duration
+	RetryCount                int
 }
 
 // Process runs the Gearman job by running the configured task.
@@ -43,6 +44,11 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 		data["error_message"] = err.Error()
 		data["value"] = 0
 		data["success"] = false
+		if conf.RetryCount > 0 {
+			log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "RETRY", data))
+			conf.RetryCount--
+			return conf.Process(job)
+		}
 		log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "END", data))
 	} else {
 		data["value"] = 1
