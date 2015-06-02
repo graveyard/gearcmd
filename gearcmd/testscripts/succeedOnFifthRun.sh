@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This script fails when it is run the first four times and succeeds on the fifth run.
+# It keeps track of how many times it has been run using an input file arg.
+
 read NUM_TIMES_RUN < $1
 if [ -z "$NUM_TIMES_RUN" ]; then
   NUM_TIMES_RUN="0"
