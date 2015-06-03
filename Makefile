@@ -7,7 +7,6 @@ github.com/Clever/gearcmd/gearcmd
 PKGS := $(PKG) $(SUBPKGS)
 EXECUTABLE := gearcmd
 BUILDS := \
-	build/$(EXECUTABLE)-v$(VERSION)-darwin-amd64 \
 	build/$(EXECUTABLE)-v$(VERSION)-linux-amd64
 COMPRESSED_BUILDS := $(BUILDS:%=%.tar.gz)
 RELEASE_ARTIFACTS := $(COMPRESSED_BUILDS:build/%=release/%)
@@ -39,8 +38,6 @@ cmd/gearcmd/version.go: VERSION
 	echo '' >> cmd/gearcmd/version.go # Write a go file that lints :)
 	echo 'const Version = "$(VERSION)"' >> cmd/gearcmd/version.go
 
-build/$(EXECUTABLE)-v$(VERSION)-darwin-amd64:
-	GOARCH=amd64 GOOS=darwin go build -o "$@/$(EXECUTABLE)" $(PKG)
 build/$(EXECUTABLE)-v$(VERSION)-linux-amd64:
 	GOARCH=amd64 GOOS=linux go build -o "$@/$(EXECUTABLE)" $(PKG)
 build: $(BUILDS)
