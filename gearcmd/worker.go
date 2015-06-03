@@ -65,9 +65,10 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 			return nil, err
 		}
 		conf.RetryCount--
+		data["function"] = conf.FunctionName
+		data["job_id"] = getJobId(job)
+		data["job_data"] = string(job.Data())
 		log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "RETRY", data))
-		log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "RESTART",
-			map[string]interface{}{"function": conf.FunctionName, "job_id": getJobId(job), "job_data": string(job.Data())}))
 	}
 }
 
