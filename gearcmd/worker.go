@@ -39,8 +39,10 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 		err := conf.doProcess(job)
 		end := time.Now()
 		data := map[string]interface{}{
-			"function": conf.FunctionName, "job_id": getJobId(job),
-			"job_data": string(job.Data()), "type": "gauge",
+			"function": conf.FunctionName,
+			"job_id":   getJobId(job),
+			"job_data": string(job.Data()),
+			"type":     "gauge",
 		}
 		// Return if the job was successful.
 		if err == nil {
@@ -50,8 +52,9 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 			// Hopefully none of our jobs last long enough for a uint64...
 			log.Printf(kayvee.FormatLog("gearcmd", kayvee.Info, "duration",
 				map[string]interface{}{
-					"value": uint64(end.Sub(start).Seconds() * 1000),
-					"type":  "gauge", "function": conf.FunctionName,
+					"value":    uint64(end.Sub(start).Seconds() * 1000),
+					"type":     "gauge",
+					"function": conf.FunctionName,
 				},
 			))
 			return nil, nil
@@ -65,9 +68,6 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 			return nil, err
 		}
 		conf.RetryCount--
-		data["function"] = conf.FunctionName
-		data["job_id"] = getJobId(job)
-		data["job_data"] = string(job.Data())
 		log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "RETRY", data))
 	}
 }
