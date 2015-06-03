@@ -1,7 +1,9 @@
 package gearcmd
 
 import (
+	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -24,6 +26,24 @@ func getSuccessResponseWithConfig(payload string, config TaskConfig, t *testing.
 	return string(mockJob.OutData())
 }
 
+func testRetryOnFailure(retryCount int) ([]byte, error) {
+	// Get a temp file for the script to hold its state.
+	file, err := ioutil.TempFile("", "temp")
+	if err != nil {
+		return nil, fmt.Errorf("Could not create temporary file: %s", err.Error())
+	}
+	filename := file.Name()
+	defer os.Remove(filename)
+	defer file.Close()
+	mockJob := mock.CreateMockJob(filename)
+	config := TaskConfig{
+		FunctionName: "name",
+		FunctionCmd:  "testscripts/succeedOnFifthRun.sh",
+		RetryCount:   retryCount,
+	}
+	return config.Process(mockJob)
+}
+
 func TestSuccessResponse(t *testing.T) {
 	response := getSuccessResponse("IgnorePayload", "testscripts/success.sh", t)
 	assert.Equal(t, "SuccessResponse\n", response)
@@ -33,6 +53,18 @@ func TestErrorOnNonZeroExitCode(t *testing.T) {
 	mockJob := mock.CreateMockJob("IgnorePayload")
 	config := TaskConfig{FunctionName: "name", FunctionCmd: "testscripts/nonZeroExit.sh", WarningLines: 5}
 	response, err := config.Process(mockJob)
+	assert.Nil(t, response)
+	assert.EqualError(t, err, "exit status 2")
+}
+
+func TestRetryOnFailureScriptEventuallySucceeds(t *testing.T) {
+	response, err := testRetryOnFailure(4)
+	assert.Nil(t, response)
+	assert.NoError(t, err)
+}
+
+func TestRetryOnFailureScriptFails(t *testing.T) {
+	response, err := testRetryOnFailure(3)
 	assert.Nil(t, response)
 	assert.EqualError(t, err, "exit status 2")
 }

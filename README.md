@@ -26,6 +26,7 @@ Params:
 - `port` (optional): The Gearman port to connect to. Defaults to `$GEARMAN_PORT`.
 - `parseargs` (optional): If false, send the job payload directly to the cmd as its first argument without parsing it. Requires flag syntax `-parseargs=[true/false]`. It will not work properly without the equal sign.
 - `cmdtimeout` (optional): Maximum time for the command to run before it will be killed, as parsed by [time.ParseDuration](http://golang.org/pkg/time/#ParseDuration) (e.g. `2h`, `30m`, `2h30m`). Defaults to never.
+- `retry` (optional): Number of times to retry the job if it fails. Defaults to 0.
 
 ### Command Interface
 
