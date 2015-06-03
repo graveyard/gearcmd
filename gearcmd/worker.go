@@ -33,36 +33,42 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	// This wraps the actual processing to do some logging
 	log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "START",
 		map[string]interface{}{"function": conf.FunctionName, "job_id": getJobId(job), "job_data": string(job.Data())}))
-	start := time.Now()
-	err := conf.doProcess(job)
-	end := time.Now()
-	data := map[string]interface{}{
-		"function": conf.FunctionName, "job_id": getJobId(job),
-		"job_data": string(job.Data()), "type": "gauge",
-	}
-	if err != nil {
+
+	for {
+		start := time.Now()
+		err := conf.doProcess(job)
+		end := time.Now()
+		data := map[string]interface{}{
+			"function": conf.FunctionName, "job_id": getJobId(job),
+			"job_data": string(job.Data()), "type": "gauge",
+		}
+		// Return if the job was successful.
+		if err == nil {
+			data["value"] = 1
+			data["success"] = true
+			log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "END", data))
+			// Hopefully none of our jobs last long enough for a uint64...
+			log.Printf(kayvee.FormatLog("gearcmd", kayvee.Info, "duration",
+				map[string]interface{}{
+					"value": uint64(end.Sub(start).Seconds() * 1000),
+					"type":  "gauge", "function": conf.FunctionName,
+				},
+			))
+			return nil, nil
+		}
 		data["error_message"] = err.Error()
 		data["value"] = 0
 		data["success"] = false
-		if conf.RetryCount > 0 {
-			log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "RETRY", data))
-			conf.RetryCount--
-			return conf.Process(job)
+		// Return if the job has no more retries.
+		if conf.RetryCount <= 0 {
+			log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "END", data))
+			return nil, err
 		}
-		log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "END", data))
-	} else {
-		data["value"] = 1
-		data["success"] = true
-		log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "END", data))
-		// Hopefully none of our jobs last long enough for a uint64...
-		log.Printf(kayvee.FormatLog("gearcmd", kayvee.Info, "duration",
-			map[string]interface{}{
-				"value": uint64(end.Sub(start).Seconds() * 1000),
-				"type":  "gauge", "function": conf.FunctionName,
-			},
-		))
+		conf.RetryCount--
+		log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "RETRY", data))
+		log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "RESTART",
+			map[string]interface{}{"function": conf.FunctionName, "job_id": getJobId(job), "job_data": string(job.Data())}))
 	}
-	return nil, err
 }
 
 // getJobId returns the jobId from the job handle

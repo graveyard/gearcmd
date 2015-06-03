@@ -60,7 +60,7 @@ func TestErrorOnNonZeroExitCode(t *testing.T) {
 func TestRetryOnFailureScriptEventuallySucceeds(t *testing.T) {
 	response, err := testRetryOnFailure(4)
 	assert.Nil(t, response)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestRetryOnFailureScriptFails(t *testing.T) {
