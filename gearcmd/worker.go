@@ -44,6 +44,18 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 			"job_data": string(job.Data()),
 			"type":     "gauge",
 		}
+
+		var status string
+		if err == nil {
+			status = "success"
+		} else {
+			status = "failure"
+		}
+		log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, status, map[string]interface{}{
+			"type":     "counter",
+			"function": conf.FunctionName,
+		}))
+
 		// Return if the job was successful.
 		if err == nil {
 			data["value"] = 1
