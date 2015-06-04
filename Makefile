@@ -17,6 +17,9 @@ RELEASE_ARTIFACTS := $(COMPRESSED_BUILDS:build/%=release/%)
 $(GOPATH)/bin/golint:
 	@go get github.com/golang/lint/golint
 
+$(GOPATH)/bin/gox:
+	go get github.com/mitchellh/gox
+
 test: $(PKGS)
 
 $(PKGS): cmd/gearcmd/version.go $(GOPATH)/bin/golint
@@ -39,9 +42,11 @@ cmd/gearcmd/version.go: VERSION
 	echo '' >> cmd/gearcmd/version.go # Write a go file that lints :)
 	echo 'const Version = "$(VERSION)"' >> cmd/gearcmd/version.go
 
-build/$(EXECUTABLE)-v$(VERSION)-darwin-amd64:
+build/$(EXECUTABLE)-v$(VERSION)-darwin-amd64: $(GOPATH)/bin/gox
+	sudo PATH=$$PATH:`go env GOROOT`/bin $(GOPATH)/bin/gox -build-toolchain -os darwin -arch amd64
 	GOARCH=amd64 GOOS=darwin go build -o "$@/$(EXECUTABLE)" $(PKG)
-build/$(EXECUTABLE)-v$(VERSION)-linux-amd64:
+build/$(EXECUTABLE)-v$(VERSION)-linux-amd64: $(GOPATH)/bin/gox
+	sudo PATH=$$PATH:`go env GOROOT`/bin $(GOPATH)/bin/gox -build-toolchain -os linux  -arch amd64
 	GOARCH=amd64 GOOS=linux go build -o "$@/$(EXECUTABLE)" $(PKG)
 build: $(BUILDS)
 
