@@ -51,7 +51,7 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 		} else {
 			status = "failure"
 		}
-		log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, status, map[string]interface{}{
+		log.Println(kayvee.FormatLog("gearman", kayvee.Info, status, map[string]interface{}{
 			"type":     "counter",
 			"function": conf.FunctionName,
 		}))
