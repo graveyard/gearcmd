@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/Clever/baseworker-go"
@@ -112,6 +113,8 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 
 	}
 	cmd := exec.Command(conf.FunctionCmd, args...)
+	// create new pgid for this process so we can later kill all subprocess launched by it
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	// Write the stdout and stderr of the process to both this process' stdout and stderr
 	// and also write it to a byte buffer so that we can return it with the Gearman job
@@ -153,9 +156,13 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 		// Will be nil if the channel was closed without any errors
 		return err
 	case <-time.After(conf.CmdTimeout):
-		if err := cmd.Process.Kill(); err != nil {
-			return fmt.Errorf("process timeout after %s. error: %s", conf.CmdTimeout.String(), err.Error())
+		// kill entire group of process spawned by our cmd.Process
+		pgid, err := syscall.Getpgid(cmd.Process.Pid)
+		fmt.Println("Killing pgid:", pgid)
+		if err != nil {
+			return fmt.Errorf("process timeout after %s. Unable to kill process, error: %s", conf.CmdTimeout.String(), err.Error())
 		}
+		syscall.Kill(-pgid, 9) // minus sign required to kill PGIDs
 		return fmt.Errorf("process timed out after %s", conf.CmdTimeout.String())
 	}
 }
