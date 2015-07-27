@@ -160,9 +160,13 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 		pgid, err := syscall.Getpgid(cmd.Process.Pid)
 		fmt.Println("Killing pgid:", pgid)
 		if err != nil {
+			return fmt.Errorf("process timeout after %s. Unable to get pgid, error: %s", conf.CmdTimeout.String(), err.Error())
+		}
+		// minus sign required to kill PGIDs
+		err = syscall.Kill(-pgid, syscall.SIGTERM)
+		if err != nil {
 			return fmt.Errorf("process timeout after %s. Unable to kill process, error: %s", conf.CmdTimeout.String(), err.Error())
 		}
-		syscall.Kill(-pgid, 9) // minus sign required to kill PGIDs
 		return fmt.Errorf("process timed out after %s", conf.CmdTimeout.String())
 	}
 }
