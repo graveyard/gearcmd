@@ -35,8 +35,8 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "START",
 		map[string]interface{}{"function": conf.FunctionName, "job_id": getJobId(job), "job_data": string(job.Data())}))
 
+	start := time.Now()
 	for {
-		start := time.Now()
 		err := conf.doProcess(job)
 		end := time.Now()
 		data := map[string]interface{}{
@@ -46,19 +46,12 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 			"type":     "gauge",
 		}
 
-		var status string
-		if err == nil {
-			status = "success"
-		} else {
-			status = "failure"
-		}
-		log.Println(kayvee.FormatLog("gearman", kayvee.Info, status, map[string]interface{}{
-			"type":     "counter",
-			"function": conf.FunctionName,
-		}))
-
 		// Return if the job was successful.
 		if err == nil {
+			log.Println(kayvee.FormatLog("gearman", kayvee.Info, "success", map[string]interface{}{
+				"type":     "counter",
+				"function": conf.FunctionName,
+			}))
 			data["value"] = 1
 			data["success"] = true
 			log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "END", data))
@@ -77,6 +70,10 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 		data["success"] = false
 		// Return if the job has no more retries.
 		if conf.RetryCount <= 0 {
+			log.Println(kayvee.FormatLog("gearman", kayvee.Info, "failure", map[string]interface{}{
+				"type":     "counter",
+				"function": conf.FunctionName,
+			}))
 			log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "END", data))
 			return nil, err
 		}
