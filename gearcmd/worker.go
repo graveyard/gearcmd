@@ -158,7 +158,7 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 	case <-time.After(conf.CmdTimeout):
 		// kill entire group of process spawned by our cmd.Process
 		pgid, err := syscall.Getpgid(cmd.Process.Pid)
-		fmt.Println("Killing pgid:", pgid)
+		log.Println("Killing pgid:", pgid)
 		if err != nil {
 			return fmt.Errorf("process timeout after %s. Unable to get pgid, error: %s", conf.CmdTimeout.String(), err.Error())
 		}
