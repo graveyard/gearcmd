@@ -102,8 +102,9 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 	var err error
 	if conf.ParseArgs {
 		args, err = argsparser.ParseArgs(string(job.Data()))
+
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to parse args: %s", err.Error())
 		}
 	} else {
 		args = []string{string(job.Data())}
