@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/Clever/baseworker-go"
+	"github.com/Clever/discovery-go"
 	"github.com/Clever/gearcmd/gearcmd"
 )
 
@@ -27,17 +28,19 @@ func main() {
 	}
 
 	if len(*gearmanHost) == 0 {
-		hostEnv := os.Getenv("GEARMAN_HOST")
-		if len(hostEnv) == 0 {
-			exitWithError("must either specify a host argument or set the GEARMAN_HOST environment variable")
+		hostEnv, err := discovery.Host("gearmand", "tcp")
+		if err != nil {
+			exitWithError("must either specify a host argument or set an environment variable " +
+				"that conforms to https://godoc.org/github.com/Clever/discovery-go")
 		}
 		*gearmanHost = hostEnv
 	}
 
 	if len(*gearmanPort) == 0 {
-		portEnv := os.Getenv("GEARMAN_PORT")
-		if len(portEnv) == 0 {
-			exitWithError("must either specify a port argument or set the GEARMAN_PORT environment variable")
+		portEnv, err := discovery.Port("gearmand", "tcp")
+		if err != nil {
+			exitWithError("must either specify a port argument or set an environment variable " +
+				"that conforms to https://godoc.org/github.com/Clever/discovery-go")
 		}
 		*gearmanPort = portEnv
 	}
