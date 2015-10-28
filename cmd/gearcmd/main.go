@@ -14,8 +14,8 @@ import (
 func main() {
 	functionName := flag.String("name", "", "Name of the Gearman function")
 	functionCmd := flag.String("cmd", "", "The command to run")
-	gearmanHost := flag.String("host", "", "The Gearman host. If not specified the GEARMAN_HOST environment variable will be used")
-	gearmanPort := flag.String("port", "", "The Gearman port. If not specified the GEARMAN_PORT environment variable will be used")
+	gearmanHost := flag.String("host", "", "The Gearman host. If not specified the SERVICE_GEARMAND_TCP_HOST environment variable will be used")
+	gearmanPort := flag.String("port", "", "The Gearman port. If not specified the SERVICE_GEARMAND_TCP_PORT environment variable will be used")
 	parseArgs := flag.Bool("parseargs", true, "If false send the job payload directly to the cmd as its first argument without parsing it")
 	printVersion := flag.Bool("version", false, "Print the version and exit")
 	cmdTimeout := flag.Duration("cmdtimeout", 0, "Maximum time for the command to run before it will be killed, e.g. 2h, 30m, 2h30m")
