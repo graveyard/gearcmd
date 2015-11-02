@@ -7,7 +7,12 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/Clever/baseworker-go",
-			"Rev": "9e1400e9aa6d46c4dacd8d3b8453cc14d38f1248"
+			"Rev": "2adf4bee429ae0e278f353ba40131389e961d73d"
+		},
+		{
+			"ImportPath": "github.com/Clever/discovery-go",
+			"Comment": "v1.1",
+			"Rev": "d77f9ad4526504b029218791389257ece92d7004"
 		},
 		{
 			"ImportPath": "github.com/Clever/gearman-go/worker",

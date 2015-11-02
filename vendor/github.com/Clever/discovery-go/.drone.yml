@@ -1,4 +1,4 @@
-image: clever/drone-go:1.5
+image: bradrydzewski/go:1.4
 notify:
   email:
     recipients:
@@ -9,4 +9,5 @@ notify:
     on_success: false
     webhook_url: $$slack_webhook
 script:
-- make test
+- go get
+- go test -v
