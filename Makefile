@@ -28,7 +28,6 @@ $(GOPATH)/bin/golint:
 test: $(PKGS)
 
 $(PKGS): cmd/gearcmd/version.go $(GOPATH)/bin/golint
-	@go get -d -t $@
 	@gofmt -w=true $(GOPATH)/src/$@*/**.go
 	@echo "LINTING..."
 	@$(GOPATH)/bin/golint $(GOPATH)/src/$@*/**.go
