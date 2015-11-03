@@ -8,17 +8,5 @@ notify:
     on_started: false
     on_success: false
     webhook_url: $$slack_webhook
-publish:
-  github:
-    artifacts:
-    - release
-    repo: gearcmd
-    script:
-    - make release
-    tag: v$(cat VERSION)
-    token: $$github_token
-    user: Clever
-    when:
-      branch: master
 script:
 - make test

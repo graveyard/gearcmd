@@ -1,0 +1,13 @@
+image: bradrydzewski/go:1.4
+notify:
+  email:
+    recipients:
+    - drone@clever.com
+  slack:
+    on_failure: true
+    on_started: false
+    on_success: false
+    webhook_url: $$slack_webhook
+script:
+- go get
+- go test -v
