@@ -89,7 +89,6 @@ func getJobId(job baseworker.Job) string {
 }
 
 func (conf TaskConfig) doProcess(job baseworker.Job) error {
-
 	defer func() {
 		// If we panicked then set the panic message as a warning. Gearman-go will
 		// handle marking this job as failed.
@@ -98,17 +97,16 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 			job.SendWarning([]byte(err.Error()))
 		}
 	}()
+
 	var args []string
 	var err error
 	if conf.ParseArgs {
 		args, err = argsparser.ParseArgs(string(job.Data()))
-
 		if err != nil {
 			return fmt.Errorf("Failed to parse args: %s", err.Error())
 		}
 	} else {
 		args = []string{string(job.Data())}
-
 	}
 	cmd := exec.Command(conf.FunctionCmd, args...)
 	// create new pgid for this process so we can later kill all subprocess launched by it

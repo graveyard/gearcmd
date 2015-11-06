@@ -20,6 +20,7 @@ func main() {
 	printVersion := flag.Bool("version", false, "Print the version and exit")
 	cmdTimeout := flag.Duration("cmdtimeout", 0, "Maximum time for the command to run before it will be killed, e.g. 2h, 30m, 2h30m")
 	retryCount := flag.Int("retry", 0, "Number of times to retry the job if it fails")
+	warningLength := flag.Int("warningLength", 5, "Number of warning lines to store and send back to the gearmn job")
 	flag.Parse()
 
 	if *printVersion {
@@ -27,35 +28,31 @@ func main() {
 		os.Exit(0)
 	}
 
-	if len(*gearmanHost) == 0 {
-		hostEnv, err := discovery.Host("gearmand", "tcp")
-		if err != nil {
+	var err error
+	if *gearmanHost == "" {
+		if *gearmanHost, err = discovery.Host("gearmand", "tcp"); err != nil {
 			exitWithError("must either specify a host argument or set an environment variable " +
 				"that conforms to https://godoc.org/github.com/Clever/discovery-go")
 		}
-		*gearmanHost = hostEnv
 	}
-
-	if len(*gearmanPort) == 0 {
-		portEnv, err := discovery.Port("gearmand", "tcp")
-		if err != nil {
+	if *gearmanPort == "" {
+		if *gearmanPort, err = discovery.Port("gearmand", "tcp"); err != nil {
 			exitWithError("must either specify a port argument or set an environment variable " +
 				"that conforms to https://godoc.org/github.com/Clever/discovery-go")
 		}
-		*gearmanPort = portEnv
 	}
 
-	if len(*functionName) == 0 {
+	if *functionName == "" {
 		exitWithError("name not defined")
 	}
-	if len(*functionCmd) == 0 {
+	if *functionCmd == "" {
 		exitWithError("cmd not defined")
 	}
 
 	config := gearcmd.TaskConfig{
 		FunctionName: *functionName,
 		FunctionCmd:  *functionCmd,
-		WarningLines: 5,
+		WarningLines: *warningLength,
 		ParseArgs:    *parseArgs,
 		CmdTimeout:   *cmdTimeout,
 		RetryCount:   *retryCount,
