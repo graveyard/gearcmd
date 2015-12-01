@@ -2,7 +2,10 @@
 	"ImportPath": "github.com/Clever/gearcmd",
 	"GoVersion": "go1.5.1",
 	"Packages": [
-		"./..."
+		"github.com/Clever/gearcmd/argsparser",
+		"github.com/Clever/gearcmd/cmd/gearcmd",
+		"github.com/Clever/gearcmd/gearcmd",
+		"github.com/Clever/gearcmd/gearcmd/testscripts"
 	],
 	"Deps": [
 		{
@@ -11,7 +14,7 @@
 		},
 		{
 			"ImportPath": "github.com/Clever/discovery-go",
-			"Comment": "v1.1",
+			"Comment": "v1-12-gd77f9ad",
 			"Rev": "d77f9ad4526504b029218791389257ece92d7004"
 		},
 		{
