@@ -1,10 +1,7 @@
 VERSION := $(shell cat VERSION)
 SHELL := /bin/bash
 PKG = github.com/Clever/gearcmd/cmd/gearcmd
-SUBPKGS := \
-github.com/Clever/gearcmd/argsparser \
-github.com/Clever/gearcmd/gearcmd
-PKGS := $(PKG) $(SUBPKGS)
+PKGS := $(shell go list ./... | grep -v /vendor)
 EXECUTABLE := gearcmd
 BUILDS := \
 	build/$(EXECUTABLE)-v$(VERSION)-darwin-amd64 \
@@ -12,7 +9,7 @@ BUILDS := \
 COMPRESSED_BUILDS := $(BUILDS:%=%.tar.gz)
 RELEASE_ARTIFACTS := $(COMPRESSED_BUILDS:build/%=release/%)
 
-.PHONY: test $(PKGS) clean release
+.PHONY: test $(PKGS) clean release vendor
 
 GOVERSION := $(shell go version | grep 1.5)
 ifeq "$(GOVERSION)" ""
@@ -21,8 +18,13 @@ endif
 
 export GO15VENDOREXPERIMENT = 1
 
-$(GOPATH)/bin/golint:
-	@go get github.com/golang/lint/golint
+GOLINT := $(GOPATH)/bin/golint
+$(GOLINT):
+	go get github.com/golang/lint/golint
+
+GODEP := $(GOPATH)/bin/godep
+$(GODEP):
+	go get -u github.com/tools/godep
 
 
 test: $(PKGS)
@@ -30,7 +32,7 @@ test: $(PKGS)
 $(PKGS): cmd/gearcmd/version.go $(GOPATH)/bin/golint
 	@gofmt -w=true $(GOPATH)/src/$@*/**.go
 	@echo "LINTING..."
-	@$(GOPATH)/bin/golint $(GOPATH)/src/$@*/**.go
+	@$(GOLINT) $(GOPATH)/src/$@*/**.go
 	@echo ""
 ifeq ($(COVERAGE),1)
 	@go test -cover -coverprofile=$(GOPATH)/src/$@/c.out $@ -test.v
@@ -63,3 +65,7 @@ release: $(RELEASE_ARTIFACTS)
 
 clean:
 	rm -rf build release
+
+vendor: $(GODEP)
+	$(GODEP) save $(PKGS)
+	find vendor/ -path '*/vendor' -type d | xargs -IX rm -r X # remove any nested vendor directories

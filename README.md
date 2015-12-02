@@ -90,3 +90,8 @@ To create an official release:
 You can do this with [`gitsem`](https://github.com/clever/gitsem), but make sure not to create the tag, e.g. `gitsem -tag=false patch`.
 
 2. Push the change to Github. Drone will automatically create a release for you.
+
+
+## Vendoring
+
+Please view the [dev-handbook for instructions](https://github.com/Clever/dev-handbook/blob/master/golang/godep.md).
