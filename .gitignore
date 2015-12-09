@@ -1,3 +1,4 @@
 build
 release
 cmd/gearcmd/version.go
+cmd/gearcmd/gearcmd

@@ -144,10 +144,10 @@ func TestStderrCapturedWarningsOnFailedJobs(t *testing.T) {
 
 func TestMockJobName(t *testing.T) {
 	mockJob := &mock.MockJob{GearmanHandle: "H:lap:123"}
-	assert.Equal(t, "123", getJobId(mockJob))
+	assert.Equal(t, "123", getJobID(mockJob))
 
 	mockJob = &mock.MockJob{GearmanHandle: ""}
-	assert.Equal(t, "", getJobId(mockJob))
+	assert.Equal(t, "", getJobID(mockJob))
 }
 
 func TestRemoveQuotesIfParseArgs(t *testing.T) {
