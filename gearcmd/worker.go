@@ -33,7 +33,7 @@ type TaskConfig struct {
 func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	// This wraps the actual processing to do some logging
 	log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "START",
-		map[string]interface{}{"function": conf.FunctionName, "job_id": getJobId(job), "job_data": string(job.Data())}))
+		map[string]interface{}{"function": conf.FunctionName, "job_id": getJobID(job), "job_data": string(job.Data())}))
 
 	start := time.Now()
 	for {
@@ -41,7 +41,7 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 		end := time.Now()
 		data := map[string]interface{}{
 			"function": conf.FunctionName,
-			"job_id":   getJobId(job),
+			"job_id":   getJobID(job),
 			"job_data": string(job.Data()),
 			"type":     "gauge",
 		}
@@ -82,8 +82,8 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	}
 }
 
-// getJobId returns the jobId from the job handle
-func getJobId(job baseworker.Job) string {
+// getJobID returns the jobId from the job handle
+func getJobID(job baseworker.Job) string {
 	splits := strings.Split(job.Handle(), ":")
 	return splits[len(splits)-1]
 }
