@@ -1,6 +1,7 @@
 package gearcmd
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -151,13 +152,28 @@ func TestMockJobName(t *testing.T) {
 }
 
 func TestRemoveQuotesIfParseArgs(t *testing.T) {
-	response := getSuccessResponse("{\"key\":\"value\"}", "testscripts/echoInput.sh", t)
+	response := getSuccessResponse(`{"key":"value"}`, "testscripts/echoInput.sh", t)
 	assert.Equal(t, "{key:value}\n\n", response)
 }
 
 func TestNoParse(t *testing.T) {
 	config := TaskConfig{FunctionName: "name", FunctionCmd: "testscripts/echoInput.sh",
 		WarningLines: 5, ParseArgs: false}
-	response := getSuccessResponseWithConfig("{\"key\":\"value\"}", config, t)
+	response := getSuccessResponseWithConfig(`{"key":"value"}`, config, t)
 	assert.Equal(t, "{\"key\":\"value\"}\n\n", response)
+}
+
+func TestSendStderrWarnings(t *testing.T) {
+	stdErrStr := ""
+	for i := 0; i < 30; i++ {
+		stdErrStr += fmt.Sprintf("line #%d\n", i)
+	}
+	expectedStr := ""
+	for i := 20; i < 30; i++ {
+		expectedStr += fmt.Sprintf("line #%d\n", i)
+	}
+	mockJob := mock.CreateMockJob("")
+
+	assert.Nil(t, sendStderrWarnings(bytes.NewBufferString(stdErrStr), mockJob, 10))
+	assert.Equal(t, expectedStr, string(bytes.Join(mockJob.GearmanWarnings, []byte{})))
 }
