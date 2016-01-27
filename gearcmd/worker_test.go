@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	mock "github.com/Clever/baseworker-go/mock"
+	mock "github.com/Clever/gearcmd/baseworker/mock"
 	"github.com/stretchr/testify/assert"
 )
 
