@@ -1,7 +1,7 @@
 package main
 
 import (
-	mock "github.com/Clever/baseworker-go/mock"
+	mock "github.com/Clever/gearcmd/baseworker/mock"
 	"github.com/Clever/gearcmd/gearcmd"
 )
 

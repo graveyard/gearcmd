@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Clever/baseworker-go/mock"
+	"github.com/Clever/gearcmd/baseworker/mock"
 )
 
 // GetTestSigtermHandler return an no-op sigterm handler for the tests so that they

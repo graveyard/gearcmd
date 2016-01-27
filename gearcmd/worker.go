@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Clever/baseworker-go"
 	"github.com/Clever/gearcmd/argsparser"
+	"github.com/Clever/gearcmd/baseworker"
 	"gopkg.in/Clever/kayvee-go.v2"
 )
 

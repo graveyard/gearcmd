@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/Clever/baseworker-go"
 	"github.com/Clever/discovery-go"
+	"github.com/Clever/gearcmd/baseworker"
 	"github.com/Clever/gearcmd/gearcmd"
 )
 
