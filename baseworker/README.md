@@ -1,3 +1,9 @@
+# NOTE
+
+This is a copy of the deprecated `baseworker-go` repo.
+
+
+
 # baseworker
 --
     import "github.com/Clever/baseworker-go"
