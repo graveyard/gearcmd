@@ -20,11 +20,12 @@ import (
 
 // TaskConfig defines the configuration for the task.
 type TaskConfig struct {
-	FunctionName, FunctionCmd string
-	WarningLines              int
-	ParseArgs                 bool
-	CmdTimeout                time.Duration
-	RetryCount                int
+	FunctionName string
+	FunctionCmd  string
+	WarningLines int
+	ParseArgs    bool
+	CmdTimeout   time.Duration
+	RetryCount   int
 }
 
 // Process runs the Gearman job by running the configured task.
@@ -109,6 +110,10 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 		args = []string{string(job.Data())}
 	}
 	cmd := exec.Command(conf.FunctionCmd, args...)
+
+	// add the gearman job id to the env of the job
+	cmd.Env = append(os.Environ(), fmt.Sprintf("JOB_ID=%s", getJobID(job)))
+
 	// create new pgid for this process so we can later kill all subprocess launched by it
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
