@@ -34,6 +34,8 @@ Params:
 
 The command will be given as its arguments the exact arguments passed as the Gearman payload. These arguments will be parsed as if the command were being called in Bash. For example, running `gearcmd --name grep --cmd grep` and then submitting a Gearman job with function `grep` and payload `-i 'some regex' some-file.txt` would result in `grep` being run as if it were called on the command line like so: `grep -i 'some regex' some-file.txt`.
 
+The environment variable `JOB_ID` is injected while the job command is run. It is set to the job number of the gearman job being handled.
+
 #### Output
 
 - The command's stdout will be emitted as the Gearman worker's `WORK_DATA` events.

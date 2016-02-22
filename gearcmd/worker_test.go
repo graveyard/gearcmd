@@ -22,6 +22,7 @@ func getSuccessResponse(payload string, cmd string, t *testing.T) string {
 
 func getSuccessResponseWithConfig(payload string, config TaskConfig, t *testing.T) string {
 	mockJob := mock.CreateMockJob(payload)
+	mockJob.GearmanHandle = "H:lap:123"
 	_, err := config.Process(mockJob)
 	assert.Nil(t, err)
 	return string(mockJob.OutData())
@@ -176,4 +177,9 @@ func TestSendStderrWarnings(t *testing.T) {
 
 	assert.Nil(t, sendStderrWarnings(bytes.NewBufferString(stdErrStr), mockJob, 10))
 	assert.Equal(t, expectedStr, string(bytes.Join(mockJob.GearmanWarnings, []byte{})))
+}
+
+func TestEnvJobIDInsertion(t *testing.T) {
+	response := getSuccessResponse("", "testscripts/output_env.sh", t)
+	assert.Contains(t, strings.Split(response, "\n"), "JOB_ID=123")
 }
