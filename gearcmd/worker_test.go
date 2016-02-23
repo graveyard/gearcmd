@@ -182,4 +182,6 @@ func TestSendStderrWarnings(t *testing.T) {
 func TestEnvJobIDInsertion(t *testing.T) {
 	response := getSuccessResponse("", "testscripts/output_env.sh", t)
 	assert.Contains(t, strings.Split(response, "\n"), "JOB_ID=123")
+	// there will be other characters appended to the WORK_DIR so we look for a simple substring match
+	assert.Contains(t, response, "WORK_DIR=/tmp/name-123")
 }

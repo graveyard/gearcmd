@@ -6,8 +6,11 @@ import (
 	"container/ring"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -35,19 +38,41 @@ var (
 // We need to implement the Task interface so we return (byte[], error)
 // though the byte[] is always nil.
 func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
+	jobID := getJobID(job)
+	if jobID == "" {
+		jobID = strconv.Itoa(rand.Int())
+		lg.InfoD("rand-job-id", logger.M{"msg": "no job id parsed, random assigned."})
+	}
+
+	// We create a temporary directory to be used as the work directory of the process. Currently
+	// we do not handle the case of this being used multiple times when retrying, files are
+	// expected to be overwritten.
+	tempDirPath, err := ioutil.TempDir("/tmp", fmt.Sprintf("%s-%s", conf.FunctionName, jobID))
+	if err != nil {
+		lg.CriticalD("tempdir-failure", logger.M{"error": err.Error()})
+		return nil, err
+	}
+	defer os.RemoveAll(tempDirPath)
+
+	// insert the job id and the work directory path into the environment
+	extraEnvVars := []string{
+		fmt.Sprintf("JOB_ID=%s", jobID),
+		fmt.Sprintf("WORK_DIR=%s", tempDirPath),
+	}
+
 	// This wraps the actual processing to do some logging
 	lg.InfoD("START", logger.M{
 		"function": conf.FunctionName,
-		"job_id":   getJobID(job),
+		"job_id":   jobID,
 		"job_data": string(job.Data())})
 
 	start := time.Now()
 	for {
-		err := conf.doProcess(job)
+		err := conf.doProcess(job, extraEnvVars)
 		end := time.Now()
 		data := logger.M{
 			"function": conf.FunctionName,
-			"job_id":   getJobID(job),
+			"job_id":   jobID,
 			"job_data": string(job.Data()),
 			"type":     "gauge",
 		}
@@ -89,7 +114,7 @@ func getJobID(job baseworker.Job) string {
 	return splits[len(splits)-1]
 }
 
-func (conf TaskConfig) doProcess(job baseworker.Job) error {
+func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string) error {
 	defer func() {
 		// If we panicked then set the panic message as a warning. Gearman-go will
 		// handle marking this job as failed.
@@ -111,8 +136,8 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 	}
 	cmd := exec.Command(conf.FunctionCmd, args...)
 
-	// add the gearman job id to the env of the job
-	cmd.Env = append(os.Environ(), fmt.Sprintf("JOB_ID=%s", getJobID(job)))
+	// insert provided env vars into the job
+	cmd.Env = append(os.Environ(), envVars...)
 
 	// create new pgid for this process so we can later kill all subprocess launched by it
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
