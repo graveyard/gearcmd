@@ -6,7 +6,6 @@ import (
 	"container/ring"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -15,7 +14,7 @@ import (
 
 	"github.com/Clever/gearcmd/argsparser"
 	"github.com/Clever/gearcmd/baseworker"
-	"gopkg.in/Clever/kayvee-go.v2"
+	"gopkg.in/Clever/kayvee-go.v2/logger"
 )
 
 // TaskConfig defines the configuration for the task.
@@ -28,19 +27,25 @@ type TaskConfig struct {
 	RetryCount   int
 }
 
+var (
+	lg = logger.New("gearcmd")
+)
+
 // Process runs the Gearman job by running the configured task.
 // We need to implement the Task interface so we return (byte[], error)
 // though the byte[] is always nil.
 func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 	// This wraps the actual processing to do some logging
-	log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "START",
-		map[string]interface{}{"function": conf.FunctionName, "job_id": getJobID(job), "job_data": string(job.Data())}))
+	lg.InfoD("START", logger.M{
+		"function": conf.FunctionName,
+		"job_id":   getJobID(job),
+		"job_data": string(job.Data())})
 
 	start := time.Now()
 	for {
 		err := conf.doProcess(job)
 		end := time.Now()
-		data := map[string]interface{}{
+		data := logger.M{
 			"function": conf.FunctionName,
 			"job_id":   getJobID(job),
 			"job_data": string(job.Data()),
@@ -49,21 +54,17 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 
 		// Return if the job was successful.
 		if err == nil {
-			log.Println(kayvee.FormatLog("gearman", kayvee.Info, "success", map[string]interface{}{
+			lg.InfoD("success", logger.M{
 				"type":     "counter",
-				"function": conf.FunctionName,
-			}))
+				"function": conf.FunctionName})
 			data["value"] = 1
 			data["success"] = true
-			log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "END", data))
+			lg.InfoD("END", data)
 			// Hopefully none of our jobs last long enough for a uint64...
-			log.Printf(kayvee.FormatLog("gearcmd", kayvee.Info, "duration",
-				map[string]interface{}{
-					"value":    uint64(end.Sub(start).Seconds() * 1000),
-					"type":     "gauge",
-					"function": conf.FunctionName,
-				},
-			))
+			lg.InfoD("duration", logger.M{
+				"value":    uint64(end.Sub(start).Seconds() * 1000),
+				"type":     "gauge",
+				"function": conf.FunctionName})
 			return nil, nil
 		}
 		data["error_message"] = err.Error()
@@ -71,15 +72,14 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 		data["success"] = false
 		// Return if the job has no more retries.
 		if conf.RetryCount <= 0 {
-			log.Println(kayvee.FormatLog("gearman", kayvee.Info, "failure", map[string]interface{}{
+			lg.InfoD("failure", logger.M{
 				"type":     "counter",
-				"function": conf.FunctionName,
-			}))
-			log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "END", data))
+				"function": conf.FunctionName})
+			lg.ErrorD("END", data)
 			return nil, err
 		}
 		conf.RetryCount--
-		log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "RETRY", data))
+		lg.ErrorD("RETRY", data)
 	}
 }
 
@@ -159,7 +159,7 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 	case <-time.After(conf.CmdTimeout):
 		// kill entire group of process spawned by our cmd.Process
 		pgid, err := syscall.Getpgid(cmd.Process.Pid)
-		log.Println("Killing pgid:", pgid)
+		lg.InfoD("killing-pgid", logger.M{"pgid": pgid})
 		if err != nil {
 			return fmt.Errorf("process timeout after %s. Unable to get pgid, error: %s", conf.CmdTimeout.String(), err.Error())
 		}
