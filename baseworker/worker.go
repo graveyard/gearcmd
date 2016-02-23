@@ -2,7 +2,6 @@ package baseworker
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -44,7 +43,7 @@ func (worker *Worker) Listen(host, port string) error {
 	worker.w.AddFunc(worker.name, worker.fn, gearmanWorker.Unlimited)
 	if err := worker.w.Ready(); err != nil {
 		lg.CriticalD("worker-error", logger.M{"error": err.Error()})
-		flag.PrintDefaults()
+		os.Exit(1)
 	}
 	worker.w.Work()
 	return nil

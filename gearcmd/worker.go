@@ -37,49 +37,47 @@ var (
 // Process runs the Gearman job by running the configured task.
 // We need to implement the Task interface so we return (byte[], error)
 // though the byte[] is always nil.
-func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
+func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
 	jobID := getJobID(job)
 	if jobID == "" {
 		jobID = strconv.Itoa(rand.Int())
 		lg.InfoD("rand-job-id", logger.M{"msg": "no job id parsed, random assigned."})
 	}
 
-	// We create a temporary directory to be used as the work directory of the process. Currently
-	// we do not handle the case of this being used multiple times when retrying, files are
-	// expected to be overwritten.
-	tempDirPath, err := ioutil.TempDir("/tmp", fmt.Sprintf("%s-%s", conf.FunctionName, jobID))
-	if err != nil {
-		lg.CriticalD("tempdir-failure", logger.M{"error": err.Error()})
-		return nil, err
-	}
-	defer os.RemoveAll(tempDirPath)
-
-	// insert the job id and the work directory path into the environment
-	extraEnvVars := []string{
-		fmt.Sprintf("JOB_ID=%s", jobID),
-		fmt.Sprintf("WORK_DIR=%s", tempDirPath),
+	data := logger.M{
+		"function": conf.FunctionName,
+		"job_id":   jobID,
+		"job_data": string(job.Data()),
 	}
 
 	// This wraps the actual processing to do some logging
-	lg.InfoD("START", logger.M{
-		"function": conf.FunctionName,
-		"job_id":   jobID,
-		"job_data": string(job.Data())})
-
+	lg.InfoD("START", data)
 	start := time.Now()
-	for {
-		err := conf.doProcess(job, extraEnvVars)
-		end := time.Now()
-		data := logger.M{
-			"function": conf.FunctionName,
-			"job_id":   jobID,
-			"job_data": string(job.Data()),
-			"type":     "gauge",
+
+	for try := 0; try < conf.RetryCount+1; try++ {
+		// We create a temporary directory to be used as the work directory of the process.
+		// A new work directory is created for every retry of the process.
+		// We try to use MEOS_SANDBOX, the default will be the system temp directory.
+		tempDirPath, err := ioutil.TempDir(os.Getenv("MESOS_SANDBOX"),
+			fmt.Sprintf("%s-%s-%d-", conf.FunctionName, jobID, try))
+		if err != nil {
+			lg.CriticalD("tempdir-failure", logger.M{"error": err.Error()})
+			return nil, err
 		}
+		defer os.RemoveAll(tempDirPath)
+
+		// insert the job id and the work directory path into the environment
+		extraEnvVars := []string{
+			fmt.Sprintf("JOB_ID=%s", jobID),
+			fmt.Sprintf("WORK_DIR=%s", tempDirPath)}
+
+		err = conf.doProcess(job, extraEnvVars)
+		end := time.Now()
+		data["type"] = "gauge"
 
 		// Return if the job was successful.
 		if err == nil {
-			lg.InfoD("success", logger.M{
+			lg.InfoD("SUCCESS", logger.M{
 				"type":     "counter",
 				"function": conf.FunctionName})
 			data["value"] = 1
@@ -92,20 +90,20 @@ func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
 				"function": conf.FunctionName})
 			return nil, nil
 		}
-		data["error_message"] = err.Error()
+
 		data["value"] = 0
 		data["success"] = false
-		// Return if the job has no more retries.
-		if conf.RetryCount <= 0 {
-			lg.InfoD("failure", logger.M{
-				"type":     "counter",
-				"function": conf.FunctionName})
-			lg.ErrorD("END", data)
-			return nil, err
+		data["error_message"] = err.Error()
+		returnErr = err
+
+		if try != conf.RetryCount {
+			lg.ErrorD("RETRY", data)
 		}
-		conf.RetryCount--
-		lg.ErrorD("RETRY", data)
 	}
+
+	lg.InfoD("FAILURE", logger.M{"type": "counter", "function": conf.FunctionName})
+	lg.ErrorD("END", data)
+	return nil, returnErr
 }
 
 // getJobID returns the jobId from the job handle
