@@ -1,47 +1,50 @@
 # kayvee
 --
-    import "gopkg.in/clever/kayvee-go.v2"
+    import "gopkg.in/Clever/kayvee-go.v2"
 
 Package kayvee provides methods to output human and machine parseable strings,
-with a "key=val" format.
+with a "json" format.
+
+## [Logger API Documentation](./logger)
 
 ## Example
 
-Here's an example program that outputs a kayvee formatted string:
-
+```go
     package main
 
     import(
-      "fmt"
-      "gopkg.in/Clever/kayvee-go.v2"
+        "fmt"
+        "time"
+
+        "gopkg.in/Clever/kayvee-go.v2/logger"
     )
 
     func main() {
-      fmt.Println(kayvee.Format(map[string]interface{}{"hello": "world"}))
+        myLogger := logger.New("myApp")
+
+        // Simple debugging
+        myLogger.Debug("Service has started")
+
+        // Make a query and log its length
+        query_start := time.Now()
+        myLogger.GaugeFloat("QueryTime", time.Since(query_start).Seconds())
+
+        // Output structured data
+        myLogger.InfoD("DataResults", map[string]interface{}{"key": "value"})
     }
+```
+
 
 ## Testing
-
 
 Run `make test` to execute the tests
 
 ## Change log
 
-v0.0.1 - Initial release.
+v2.1 - Add kayvee-go/logger with log level, counters, and gauge support
+v0.1 - Initial release.
 
-## Usage
+## Backward Compatibility
 
-#### func  Format
+The kayvee 1.x interface still exist but is considered deprecated. You can find documentation on using it in the [compatibility guide](./compatibility.md)
 
-```go
-func Format(data map[string]interface{}) string
-```
-Format converts a map to a string of space-delimited key=val pairs
-
-#### func  FormatLog
-
-```go
-func FormatLog(source string, level string, title string, data map[string]interface{}) string
-```
-FormatLog is similar to Format, but takes additional reserved params to promote
-logging best-practices
