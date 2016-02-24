@@ -3,13 +3,17 @@ package baseworker
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
 	gearmanWorker "github.com/Clever/gearman-go/worker"
+	"gopkg.in/Clever/kayvee-go.v2/logger"
+)
+
+var (
+	lg = logger.New("gearcmd")
 )
 
 // JobFunc is a function that takes in a Gearman job and does some work on it.
@@ -38,7 +42,8 @@ func (worker *Worker) Listen(host, port string) error {
 	worker.w.AddServer("tcp4", fmt.Sprintf("%s:%s", host, port))
 	worker.w.AddFunc(worker.name, worker.fn, gearmanWorker.Unlimited)
 	if err := worker.w.Ready(); err != nil {
-		log.Fatal(err)
+		lg.CriticalD("worker-error", logger.M{"error": err.Error()})
+		os.Exit(1)
 	}
 	worker.w.Work()
 	return nil
@@ -52,7 +57,7 @@ func (worker *Worker) Close() {
 }
 
 func defaultSigtermHandler(worker *Worker) {
-	log.Println("Received sigterm. Shutting down gracefully.")
+	lg.InfoD("shutdown", logger.M{"message": "Received sigterm. Shutting down gracefully."})
 	if worker.w != nil {
 		// Shutdown blocks, waiting for all jobs to finish
 		worker.w.Shutdown()
@@ -69,15 +74,15 @@ func NewWorker(name string, fn JobFunc) *Worker {
 	}
 	w := gearmanWorker.New(gearmanWorker.OneByOne)
 	w.ErrorHandler = func(e error) {
-		log.Println(e)
+		lg.InfoD("gearman-error", logger.M{"error": e.Error()})
 		if opErr, ok := e.(*net.OpError); ok {
 			if !opErr.Temporary() {
 				proc, err := os.FindProcess(os.Getpid())
 				if err != nil {
-					log.Println(err)
+					lg.InfoD("err-getpid", logger.M{"error": err.Error()})
 				}
 				if err := proc.Signal(os.Interrupt); err != nil {
-					log.Println(err)
+					lg.InfoD("err-interrupt", logger.M{"error": err.Error()})
 				}
 			}
 		}

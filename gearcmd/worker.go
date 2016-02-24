@@ -6,16 +6,18 @@ import (
 	"container/ring"
 	"fmt"
 	"io"
-	"log"
+	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/Clever/gearcmd/argsparser"
 	"github.com/Clever/gearcmd/baseworker"
-	"gopkg.in/Clever/kayvee-go.v2"
+	"gopkg.in/Clever/kayvee-go.v2/logger"
 )
 
 // TaskConfig defines the configuration for the task.
@@ -28,59 +30,80 @@ type TaskConfig struct {
 	RetryCount   int
 }
 
+var (
+	lg = logger.New("gearcmd")
+)
+
 // Process runs the Gearman job by running the configured task.
 // We need to implement the Task interface so we return (byte[], error)
 // though the byte[] is always nil.
-func (conf TaskConfig) Process(job baseworker.Job) ([]byte, error) {
-	// This wraps the actual processing to do some logging
-	log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "START",
-		map[string]interface{}{"function": conf.FunctionName, "job_id": getJobID(job), "job_data": string(job.Data())}))
+func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
+	jobID := getJobID(job)
+	if jobID == "" {
+		jobID = strconv.Itoa(rand.Int())
+		lg.InfoD("rand-job-id", logger.M{"msg": "no job id parsed, random assigned."})
+	}
 
+	data := logger.M{
+		"function": conf.FunctionName,
+		"job_id":   jobID,
+		"job_data": string(job.Data()),
+	}
+
+	// This wraps the actual processing to do some logging
+	lg.InfoD("START", data)
 	start := time.Now()
-	for {
-		err := conf.doProcess(job)
-		end := time.Now()
-		data := map[string]interface{}{
-			"function": conf.FunctionName,
-			"job_id":   getJobID(job),
-			"job_data": string(job.Data()),
-			"type":     "gauge",
+
+	for try := 0; try < conf.RetryCount+1; try++ {
+		// We create a temporary directory to be used as the work directory of the process.
+		// A new work directory is created for every retry of the process.
+		// We try to use MEOS_SANDBOX, the default will be the system temp directory.
+		tempDirPath, err := ioutil.TempDir(os.Getenv("MESOS_SANDBOX"),
+			fmt.Sprintf("%s-%s-%d-", conf.FunctionName, jobID, try))
+		if err != nil {
+			lg.CriticalD("tempdir-failure", logger.M{"error": err.Error()})
+			return nil, err
 		}
+		defer os.RemoveAll(tempDirPath)
+
+		// insert the job id and the work directory path into the environment
+		extraEnvVars := []string{
+			fmt.Sprintf("JOB_ID=%s", jobID),
+			fmt.Sprintf("WORK_DIR=%s", tempDirPath)}
+
+		err = conf.doProcess(job, extraEnvVars)
+		end := time.Now()
+		data["type"] = "gauge"
 
 		// Return if the job was successful.
 		if err == nil {
-			log.Println(kayvee.FormatLog("gearman", kayvee.Info, "success", map[string]interface{}{
+			lg.InfoD("SUCCESS", logger.M{
 				"type":     "counter",
-				"function": conf.FunctionName,
-			}))
+				"function": conf.FunctionName})
 			data["value"] = 1
 			data["success"] = true
-			log.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "END", data))
+			lg.InfoD("END", data)
 			// Hopefully none of our jobs last long enough for a uint64...
-			log.Printf(kayvee.FormatLog("gearcmd", kayvee.Info, "duration",
-				map[string]interface{}{
-					"value":    uint64(end.Sub(start).Seconds() * 1000),
-					"type":     "gauge",
-					"function": conf.FunctionName,
-				},
-			))
+			lg.InfoD("duration", logger.M{
+				"value":    uint64(end.Sub(start).Seconds() * 1000),
+				"type":     "gauge",
+				"function": conf.FunctionName})
 			return nil, nil
 		}
-		data["error_message"] = err.Error()
+
 		data["value"] = 0
 		data["success"] = false
-		// Return if the job has no more retries.
-		if conf.RetryCount <= 0 {
-			log.Println(kayvee.FormatLog("gearman", kayvee.Info, "failure", map[string]interface{}{
-				"type":     "counter",
-				"function": conf.FunctionName,
-			}))
-			log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "END", data))
-			return nil, err
+		data["error_message"] = err.Error()
+		returnErr = err
+
+		if try != conf.RetryCount {
+			lg.ErrorD("RETRY", data)
 		}
-		conf.RetryCount--
-		log.Println(kayvee.FormatLog("gearcmd", kayvee.Error, "RETRY", data))
 	}
+
+	lg.InfoD("FAILURE", logger.M{"type": "counter", "function": conf.FunctionName})
+	lg.ErrorD("END", data)
+	return nil, returnErr
 }
 
 // getJobID returns the jobId from the job handle
@@ -89,7 +112,7 @@ func getJobID(job baseworker.Job) string {
 	return splits[len(splits)-1]
 }
 
-func (conf TaskConfig) doProcess(job baseworker.Job) error {
+func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string) error {
 	defer func() {
 		// If we panicked then set the panic message as a warning. Gearman-go will
 		// handle marking this job as failed.
@@ -111,8 +134,8 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 	}
 	cmd := exec.Command(conf.FunctionCmd, args...)
 
-	// add the gearman job id to the env of the job
-	cmd.Env = append(os.Environ(), fmt.Sprintf("JOB_ID=%s", getJobID(job)))
+	// insert provided env vars into the job
+	cmd.Env = append(os.Environ(), envVars...)
 
 	// create new pgid for this process so we can later kill all subprocess launched by it
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -159,7 +182,7 @@ func (conf TaskConfig) doProcess(job baseworker.Job) error {
 	case <-time.After(conf.CmdTimeout):
 		// kill entire group of process spawned by our cmd.Process
 		pgid, err := syscall.Getpgid(cmd.Process.Pid)
-		log.Println("Killing pgid:", pgid)
+		lg.InfoD("killing-pgid", logger.M{"pgid": pgid})
 		if err != nil {
 			return fmt.Errorf("process timeout after %s. Unable to get pgid, error: %s", conf.CmdTimeout.String(), err.Error())
 		}

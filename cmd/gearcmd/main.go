@@ -3,12 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/Clever/discovery-go"
 	"github.com/Clever/gearcmd/baseworker"
 	"github.com/Clever/gearcmd/gearcmd"
+	"gopkg.in/Clever/kayvee-go.v2/logger"
+)
+
+var (
+	lg = logger.New("gearcmd")
 )
 
 func main() {
@@ -59,15 +63,16 @@ func main() {
 	}
 	worker := baseworker.NewWorker(*functionName, config.Process)
 	defer worker.Close()
-	log.Printf("Listening for job: " + *functionName)
+	lg.InfoD("listening", logger.M{"job": *functionName})
 	if err := worker.Listen(*gearmanHost, *gearmanPort); err != nil {
-		log.Fatal(err)
+		lg.CriticalD("failure-case", logger.M{"error": err.Error()})
+		os.Exit(1)
 	}
 }
 
 // exitWithError prints out an error message and exits the process with an exit code of 1
 func exitWithError(errorStr string) {
-	log.Printf("Error: %s", errorStr)
+	lg.CriticalD("failure-case", logger.M{"error": errorStr})
 	flag.PrintDefaults()
 	os.Exit(1)
 
