@@ -145,10 +145,10 @@ func TestStderrCapturedWarningsOnFailedJobs(t *testing.T) {
 }
 
 func TestMockJobName(t *testing.T) {
-	mockJob := &mock.MockJob{GearmanHandle: "H:lap:123"}
+	mockJob := &mock.Job{GearmanHandle: "H:lap:123"}
 	assert.Equal(t, "123", getJobID(mockJob))
 
-	mockJob = &mock.MockJob{GearmanHandle: ""}
+	mockJob = &mock.Job{GearmanHandle: ""}
 	assert.Equal(t, "", getJobID(mockJob))
 }
 
