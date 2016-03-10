@@ -240,11 +240,18 @@ func TestHandleSignal(t *testing.T) {
 		return nil, nil
 	})
 	ranSigtermHandler := false
-	worker.sigtermHandler = func(worker *Worker) {
+
+	m := sync.Mutex{}
+	worker.SetSigtermHandler(func(worker *Worker) {
+		m.Lock()
+		defer m.Unlock()
 		ranSigtermHandler = true
-	}
+	})
 	syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
 	time.Sleep(time.Duration(10 * time.Millisecond))
+
+	m.Lock()
+	defer m.Unlock()
 	if !ranSigtermHandler {
 		t.Error("Didn't run sigterm handler")
 	}

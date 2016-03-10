@@ -19,8 +19,8 @@ all: test build
 
 test: $(PKGS)
 
-$(PKGS): golang-test-all-strict-deps cmd/gearcmd/version.go
-	$(call golang-test-all-strict,$@)
+$(PKGS): golang-test-all-deps cmd/gearcmd/version.go
+	$(call golang-test-all,$@)
 
 build/*: cmd/gearcmd/version.go
 cmd/gearcmd/version.go: VERSION
