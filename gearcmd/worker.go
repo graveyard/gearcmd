@@ -109,6 +109,7 @@ func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
 	}
 
 	lg.InfoD("FAILURE", logger.M{"type": "counter", "function": conf.FunctionName})
+	legacyLg.InfoD("failure", logger.M{"type": "counter", "function": conf.FunctionName})
 	lg.ErrorD("END", data)
 	return nil, returnErr
 }
