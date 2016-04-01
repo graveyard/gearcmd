@@ -33,7 +33,7 @@ type TaskConfig struct {
 var (
 	lg = logger.New("gearcmd")
 	// legacy logger used to maintain existing alerts.
-	// Once all workers are migrated over to using gearcmd, and the alarms are switched over,
+	// Once all workers are migrated to using gearcmd >= v0.5.0 and the alarms are switched over,
 	// then we can remove this logger
 	legacyLg = logger.New("gearman")
 )
