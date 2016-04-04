@@ -28,6 +28,11 @@ Params:
 - `cmdtimeout` (optional): Maximum time for the command to run before it will be killed, as parsed by [time.ParseDuration](http://golang.org/pkg/time/#ParseDuration) (e.g. `2h`, `30m`, `2h30m`). Defaults to never.
 - `retry` (optional): Number of times to retry the job if it fails. Defaults to 0.
 
+Injected env var:
+
+- `JOB_ID`: this is whatever is found after the last `:` in the job handle. This is intended for integration with [gearman-admin](https://github.com/Clever/gearman-admin) which adds a random job ID on job creation.
+- `WORK_DIR`: this is the path to a directory that is created before the `cmd` is called and deleted after the job exits.
+
 ### Command Interface
 
 #### Input
