@@ -3,15 +3,14 @@ package discovery
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strings"
 
-	kv "gopkg.in/Clever/kayvee-go.v2"
+	"gopkg.in/Clever/kayvee-go.v3"
+	"gopkg.in/Clever/kayvee-go.v3/logger"
 )
-
-// m is a convenience type for using kv.
-type m map[string]interface{}
 
 const (
 	templateVar = "SERVICE_%s_%s_%%s"
@@ -22,7 +21,7 @@ func getVar(envVar string) (string, error) {
 	envVar = strings.Replace(envVar, "-", "_", -1)
 	val := os.Getenv(envVar)
 	if val == "" {
-		return "", errors.New(kv.FormatLog("discovery-go", kv.Error, "missing env var", m{
+		return "", errors.New(kayvee.FormatLog("discovery-go", kayvee.Error, "missing.env.var", logger.M{
 			"var": envVar,
 		}))
 	}
@@ -46,11 +45,31 @@ func URL(service, name string) (string, error) {
 		return "", err
 	}
 
-	u := url.URL{
-		Scheme: proto,
-		Host:   fmt.Sprintf("%s:%s", host, port),
+	rawURL := fmt.Sprintf("%s://%s:%s", proto, host, port)
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "", errors.New(kayvee.FormatLog("discovery-go", kayvee.Error, "missing env var", logger.M{
+			"url":   rawURL,
+			"error": fmt.Errorf("Failed to parse URL: %s", err.Error()),
+		}))
 	}
 	return u.String(), nil
+}
+
+// HostPort finds the specified host:port combo for a service based off of the service's name and
+// which interface you are accessing. Values are found in environment variables fitting the scheme:
+// SERVICE_{SERVICE NAME}_{INTERFACE NAME}_{PROTO,HOST,PORT}.
+func HostPort(service, name string) (string, error) {
+	host, err := Host(service, name)
+	if err != nil {
+		return "", err
+	}
+	port, err := Port(service, name)
+	if err != nil {
+		return "", err
+	}
+
+	return net.JoinHostPort(host, port), nil
 }
 
 // Proto finds the specified protocol for a service based off of the service's name and which
