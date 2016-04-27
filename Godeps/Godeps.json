@@ -1,6 +1,7 @@
 {
 	"ImportPath": "github.com/Clever/gearcmd",
-	"GoVersion": "go1.5",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v62",
 	"Packages": [
 		"github.com/Clever/gearcmd/argsparser",
 		"github.com/Clever/gearcmd/baseworker",
@@ -12,8 +13,8 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/Clever/discovery-go",
-			"Comment": "v1.1",
-			"Rev": "d77f9ad4526504b029218791389257ece92d7004"
+			"Comment": "v1.4.0-10-g12684ef",
+			"Rev": "12684ef3012bf55b9827a6e7c96503e37b0d8379"
 		},
 		{
 			"ImportPath": "github.com/Clever/gearman-go/worker",
@@ -21,17 +22,18 @@
 			"Rev": "dc1af95307067bac141e5c954d3ebb4cf463979c"
 		},
 		{
-			"ImportPath": "github.com/getsentry/raven-go",
-			"Rev": "1cc47a9463b90f246a0503d4c2e9a55c9459ced3"
-		},
-		{
 			"ImportPath": "github.com/stretchr/testify/assert",
 			"Rev": "efa3c4c36479edac5af79cbcb4bc8cb525e09b13"
 		},
 		{
-			"ImportPath": "gopkg.in/Clever/kayvee-go.v2",
-			"Comment": "v2.3.0",
-			"Rev": "8a687354073541f8b1593b6cd1061eb56e2077ee"
+			"ImportPath": "gopkg.in/Clever/kayvee-go.v3",
+			"Comment": "v3.0.0",
+			"Rev": "d49feee080e8e32e01a5f415cf1f9dc264dfb043"
+		},
+		{
+			"ImportPath": "gopkg.in/Clever/kayvee-go.v3/logger",
+			"Comment": "v3.0.0",
+			"Rev": "d49feee080e8e32e01a5f415cf1f9dc264dfb043"
 		}
 	]
 }

@@ -2,6 +2,7 @@
 
 The following functions still exist, but are considered **deprecated**.
 
+
 #### func  Format
 
 ```go
@@ -48,6 +49,11 @@ type Logger interface {
 ```
 
 Logger is an interface satisfied by all loggers that use kayvee to Log results
+
+
+## Removed Compatibility
+
+The following functions formerly existed, but have been removed.
 
 #### type SentryLogger
 

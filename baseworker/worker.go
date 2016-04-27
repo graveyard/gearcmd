@@ -10,7 +10,7 @@ import (
 	"syscall"
 
 	gearmanWorker "github.com/Clever/gearman-go/worker"
-	"gopkg.in/Clever/kayvee-go.v2/logger"
+	"gopkg.in/Clever/kayvee-go.v3/logger"
 )
 
 var (
