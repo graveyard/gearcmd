@@ -239,14 +239,18 @@ func TestHandleSignal(t *testing.T) {
 	worker := NewWorker("SignalWorker", func(job Job) ([]byte, error) {
 		return nil, nil
 	})
-	ranSigtermHandler := false
 
 	m := sync.Mutex{}
-	worker.SetSigtermHandler(func(worker *Worker) {
+	ranSigtermHandler := false
+
+	worker.Lock()
+	worker.sigtermHandler = func(worker *Worker) {
 		m.Lock()
 		defer m.Unlock()
 		ranSigtermHandler = true
-	})
+	}
+	worker.Unlock()
+
 	syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
 	time.Sleep(time.Duration(10 * time.Millisecond))
 
