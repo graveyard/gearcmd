@@ -36,14 +36,6 @@ type Worker struct {
 	sigtermHandler SigtermHandler
 }
 
-// SetSigtermHandler safely sets the sigterm handler.
-func (worker *Worker) SetSigtermHandler(fn SigtermHandler) {
-	worker.w.Lock()
-	defer worker.w.Unlock()
-
-	worker.sigtermHandler = fn
-}
-
 // Listen starts listening for jobs on the specified host and port.
 func (worker *Worker) Listen(host, port string) error {
 	if host == "" || port == "" {
@@ -67,9 +59,6 @@ func (worker *Worker) Close() {
 }
 
 func defaultSigtermHandler(worker *Worker) {
-	worker.w.Lock()
-	defer worker.w.Unlock()
-
 	lg.InfoD("shutdown", logger.M{"message": "Received sigterm. Shutting down gracefully."})
 	if worker.w != nil {
 		// Shutdown blocks, waiting for all jobs to finish
@@ -110,8 +99,8 @@ func NewWorker(name string, fn JobFunc) *Worker {
 	signal.Notify(sigc, syscall.SIGTERM)
 	go func() {
 		<-sigc
-		worker.w.Lock()
-		defer worker.w.Unlock()
+		worker.Lock()
+		defer worker.Unlock()
 		worker.sigtermHandler(worker)
 	}()
 	return worker
