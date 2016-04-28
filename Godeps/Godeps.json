@@ -1,7 +1,6 @@
 {
 	"ImportPath": "github.com/Clever/gearcmd",
-	"GoVersion": "go1.6",
-	"GodepVersion": "v62",
+	"GoVersion": "go1.6.1",
 	"Packages": [
 		"github.com/Clever/gearcmd/argsparser",
 		"github.com/Clever/gearcmd/baseworker",
@@ -18,8 +17,8 @@
 		},
 		{
 			"ImportPath": "github.com/Clever/gearman-go/worker",
-			"Comment": "0.1.3-115-gdc1af95",
-			"Rev": "dc1af95307067bac141e5c954d3ebb4cf463979c"
+			"Comment": "0.1.3-167-g2345967",
+			"Rev": "234596770d79004b11b5fc521eefa5e5e03f3847"
 		},
 		{
 			"ImportPath": "github.com/stretchr/testify/assert",
@@ -27,13 +26,8 @@
 		},
 		{
 			"ImportPath": "gopkg.in/Clever/kayvee-go.v3",
-			"Comment": "v3.0.0",
-			"Rev": "d49feee080e8e32e01a5f415cf1f9dc264dfb043"
-		},
-		{
-			"ImportPath": "gopkg.in/Clever/kayvee-go.v3/logger",
-			"Comment": "v3.0.0",
-			"Rev": "d49feee080e8e32e01a5f415cf1f9dc264dfb043"
+			"Comment": "v3.0.0-6-g5111b9f",
+			"Rev": "5111b9fd23e223f0dc9e2f196fdf7e4f3a48689a"
 		}
 	]
 }

@@ -31,6 +31,9 @@ with a "json" format.
 
         // Output structured data
         myLogger.InfoD("DataResults", map[string]interface{}{"key": "value"})
+
+        // You can use the M alias for your key value pairs
+        myLogger.InfoD("DataResults", logger.M{"shorter": "line"})
     }
 ```
 
