@@ -4,7 +4,7 @@ include golang.mk
 .PHONY: test $(PKGS)
 SHELL := /bin/bash
 PKGS = $(shell go list ./...)
-$(eval $(call golang-version-check,1.5))
+$(eval $(call golang-version-check,1.6))
 
 test: tests.json $(PKGS)
 
