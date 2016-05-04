@@ -8,9 +8,11 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	gearmanWorker "github.com/Clever/gearman-go/worker"
 	"gopkg.in/Clever/kayvee-go.v3/logger"
+	"gopkg.in/eapache/go-resiliency.v1/retrier"
 )
 
 var (
@@ -67,6 +69,21 @@ func defaultSigtermHandler(worker *Worker) {
 	os.Exit(0)
 }
 
+func defaultErrorHandler(e error) {
+	lg.InfoD("gearman-error", logger.M{"error": e.Error()})
+	if opErr, ok := e.(*net.OpError); ok {
+		if !opErr.Temporary() {
+			proc, err := os.FindProcess(os.Getpid())
+			if err != nil {
+				lg.CriticalD("err-getpid", logger.M{"error": err.Error()})
+			}
+			if err := proc.Signal(os.Interrupt); err != nil {
+				lg.CriticalD("err-interrupt", logger.M{"error": err.Error()})
+			}
+		}
+	}
+}
+
 // NewWorker creates a new gearman worker with the specified name and job function.
 func NewWorker(name string, fn JobFunc) *Worker {
 	// Turn a JobFunc into gearmanWorker.JobFunc
@@ -75,18 +92,21 @@ func NewWorker(name string, fn JobFunc) *Worker {
 		return fn(castedJob)
 	}
 	w := gearmanWorker.New(gearmanWorker.OneByOne)
+
 	w.ErrorHandler = func(e error) {
-		lg.InfoD("gearman-error", logger.M{"error": e.Error()})
-		if opErr, ok := e.(*net.OpError); ok {
-			if !opErr.Temporary() {
-				proc, err := os.FindProcess(os.Getpid())
-				if err != nil {
-					lg.InfoD("err-getpid", logger.M{"error": err.Error()})
-				}
-				if err := proc.Signal(os.Interrupt); err != nil {
-					lg.InfoD("err-interrupt", logger.M{"error": err.Error()})
-				}
+		// Try to reconnect if it is a disconnect error
+		wdc, ok := e.(*gearmanWorker.WorkerDisconnectError)
+		if ok {
+			lg.InfoD("err-disconnected-and-reconnecting", logger.M{"name": name, "error": e.Error()})
+			r := retrier.New(retrier.ExponentialBackoff(5, 200*time.Millisecond), nil)
+			if rc_err := r.Run(wdc.Reconnect); rc_err != nil {
+				lg.CriticalD("err-disconnected-fully", logger.M{"name": name, "error": rc_err.Error()})
+				defaultErrorHandler(rc_err)
+				return
 			}
+			lg.InfoD("gearman-reconnected", logger.M{"name": name})
+		} else {
+			defaultErrorHandler(e)
 		}
 	}
 	worker := &Worker{
