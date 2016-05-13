@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	gearmanWorker "github.com/Clever/gearman-go/worker"
@@ -32,10 +30,9 @@ type SigtermHandler func(*Worker)
 // Worker represents a Gearman worker.
 type Worker struct {
 	sync.Mutex
-	fn             gearmanWorker.JobFunc
-	name           string
-	w              *gearmanWorker.Worker
-	sigtermHandler SigtermHandler
+	fn   gearmanWorker.JobFunc
+	name string
+	w    *gearmanWorker.Worker
 }
 
 // Listen starts listening for jobs on the specified host and port.
@@ -60,13 +57,15 @@ func (worker *Worker) Close() {
 	}
 }
 
-func defaultSigtermHandler(worker *Worker) {
+// Shutdown blocks while waiting for all jobs to finish
+func (worker *Worker) Shutdown() {
+	worker.Lock()
+	defer worker.Unlock()
 	lg.InfoD("shutdown", logger.M{"message": "Received sigterm. Shutting down gracefully."})
 	if worker.w != nil {
 		// Shutdown blocks, waiting for all jobs to finish
 		worker.w.Shutdown()
 	}
-	os.Exit(0)
 }
 
 func defaultErrorHandler(e error) {
@@ -110,18 +109,9 @@ func NewWorker(name string, fn JobFunc) *Worker {
 		}
 	}
 	worker := &Worker{
-		fn:             jobFunc,
-		name:           name,
-		w:              w,
-		sigtermHandler: defaultSigtermHandler,
+		fn:   jobFunc,
+		name: name,
+		w:    w,
 	}
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, syscall.SIGTERM)
-	go func() {
-		<-sigc
-		worker.Lock()
-		defer worker.Unlock()
-		worker.sigtermHandler(worker)
-	}()
 	return worker
 }

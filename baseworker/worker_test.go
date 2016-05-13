@@ -7,18 +7,11 @@ import (
 	"io"
 	"net"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
 	"github.com/Clever/gearcmd/baseworker/mock"
 )
-
-// GetTestSigtermHandler return an no-op sigterm handler for the tests so that they
-// don't call exit(0) which is the default behavior.
-func getTestSigtermHandler() SigtermHandler {
-	return func(worker *Worker) {}
-}
 
 // TestJobFuncConversion tests that our JobFunc is called when 'worker.fn' is called with a job.
 func TestJobFuncConversion(t *testing.T) {
@@ -30,7 +23,6 @@ func TestJobFuncConversion(t *testing.T) {
 		return []byte{}, nil
 	}
 	worker := NewWorker("test", jobFunc)
-	worker.sigtermHandler = getTestSigtermHandler()
 	worker.fn(mock.CreateMockJob(payload))
 }
 
@@ -154,7 +146,6 @@ func TestCanDo(t *testing.T) {
 	worker := NewWorker(name, func(job Job) ([]byte, error) {
 		return []byte{}, nil
 	})
-	worker.sigtermHandler = getTestSigtermHandler()
 	go worker.Listen("localhost", "1337")
 
 	for err := range channel {
@@ -200,7 +191,6 @@ func TestJobAssign(t *testing.T) {
 		close(channel)
 		return []byte{}, nil
 	})
-	worker.sigtermHandler = getTestSigtermHandler()
 	go worker.Listen("localhost", "1337")
 
 	for err := range channel {
@@ -224,7 +214,6 @@ func TestShutdownWaitsForJobCompletion(t *testing.T) {
 		ranJob = true
 		return []byte{}, nil
 	})
-	worker.sigtermHandler = getTestSigtermHandler()
 
 	wg.Add(1)
 	go worker.Listen("localhost", "1337")
@@ -232,31 +221,5 @@ func TestShutdownWaitsForJobCompletion(t *testing.T) {
 	worker.w.Shutdown()
 	if !ranJob {
 		t.Error("Didn't run job")
-	}
-}
-
-func TestHandleSignal(t *testing.T) {
-	worker := NewWorker("SignalWorker", func(job Job) ([]byte, error) {
-		return nil, nil
-	})
-
-	m := sync.Mutex{}
-	ranSigtermHandler := false
-
-	worker.Lock()
-	worker.sigtermHandler = func(worker *Worker) {
-		m.Lock()
-		defer m.Unlock()
-		ranSigtermHandler = true
-	}
-	worker.Unlock()
-
-	syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
-	time.Sleep(time.Duration(10 * time.Millisecond))
-
-	m.Lock()
-	defer m.Unlock()
-	if !ranSigtermHandler {
-		t.Error("Didn't run sigterm handler")
 	}
 }
