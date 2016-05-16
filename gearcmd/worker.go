@@ -221,10 +221,10 @@ func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string) error {
 func sigtermProcess(p *os.Process) error {
 	// kill entire group of process spawned by our cmd.Process
 	pgid, err := syscall.Getpgid(p.Pid)
-	lg.InfoD("killing-pgid", logger.M{"pgid": pgid})
 	if err != nil {
 		return fmt.Errorf("unable to get pgid, error: %s", err)
 	}
+	lg.InfoD("killing-pgid", logger.M{"pgid": pgid})
 	// minus sign required to kill PGIDs
 	// we use SIGTERM so that the subprocess can gracefully exit
 	if err := syscall.Kill(-pgid, syscall.SIGTERM); err != nil {
