@@ -185,3 +185,18 @@ func TestEnvJobIDInsertion(t *testing.T) {
 	// there will be other characters appended to the WORK_DIR so we look for a simple substring match
 	assert.Contains(t, response, "WORK_DIR=/tmp/name-123-0")
 }
+
+func TestHalt(t *testing.T) {
+	mockJob := mock.CreateMockJob("IgnorePayload")
+	haltChan := make(chan struct{})
+	close(haltChan)
+	config := TaskConfig{
+		FunctionName: "name",
+		FunctionCmd:  "testscripts/stderrAndHang.sh",
+		WarningLines: 2,
+		ParseArgs:    true,
+		Halt:         haltChan,
+	}
+	_, err := config.Process(mockJob)
+	assert.EqualError(t, err, "killed process due to sigterm")
+}

@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Clever/discovery-go"
 	"github.com/Clever/gearcmd/baseworker"
@@ -25,6 +27,7 @@ func main() {
 	cmdTimeout := flag.Duration("cmdtimeout", 0, "Maximum time for the command to run before it will be killed, e.g. 2h, 30m, 2h30m")
 	retryCount := flag.Int("retry", 0, "Number of times to retry the job if it fails")
 	warningLength := flag.Int("warningLength", 5, "Number of warning lines to store and send back to the gearmn job")
+	passSigterm := flag.Bool("pass-sigterm", false, "Whether or not to pass SIGTERM through to the worker process")
 	flag.Parse()
 
 	if *printVersion {
@@ -60,9 +63,22 @@ func main() {
 		ParseArgs:    *parseArgs,
 		CmdTimeout:   *cmdTimeout,
 		RetryCount:   *retryCount,
+		Halt:         make(chan struct{}),
 	}
 	worker := baseworker.NewWorker(*functionName, config.Process)
 	defer worker.Close()
+
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, syscall.SIGTERM)
+	go func() {
+		<-sigc
+		if *passSigterm {
+			close(config.Halt)
+		}
+		worker.Shutdown()
+		os.Exit(0)
+	}()
+
 	lg.InfoD("listening", logger.M{"job": *functionName})
 	if err := worker.Listen(*gearmanHost, *gearmanPort); err != nil {
 		lg.CriticalD("failure-case", logger.M{"error": err.Error()})

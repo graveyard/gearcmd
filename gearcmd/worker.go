@@ -28,6 +28,7 @@ type TaskConfig struct {
 	ParseArgs    bool
 	CmdTimeout   time.Duration
 	RetryCount   int
+	Halt         chan struct{}
 }
 
 var (
@@ -159,6 +160,8 @@ func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string) error {
 	cmd.Stdout = io.MultiWriter(os.Stdout, stdoutWriter)
 
 	done := make(chan error)
+	// Track when the job has started so that we don't try and sigterm a nil process
+	started := make(chan struct{})
 	go func() {
 		defer close(done)
 
@@ -167,8 +170,13 @@ func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string) error {
 			finishedProcessingStdout <- streamToGearman(stdoutReader, job)
 		}()
 
+		if err := cmd.Start(); err != nil {
+			done <- err
+			return
+		}
+		close(started)
 		// Save the cmdErr. We want to process stdout and stderr before we return it
-		cmdErr := cmd.Run()
+		cmdErr := cmd.Wait()
 		stdoutWriter.Close()
 
 		stdoutErr := <-finishedProcessingStdout
@@ -178,30 +186,51 @@ func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string) error {
 			done <- stdoutErr
 		}
 	}()
+	<-started
+
 	// No timeout
 	if conf.CmdTimeout == 0 {
-		// Will be nil if the channel was closed without any errors
-		return <-done
+		select {
+		case err := <-done:
+			// Will be nil if the channel was closed without any errors
+			return err
+		case <-conf.Halt:
+			if err := sigtermProcess(cmd.Process); err != nil {
+				return fmt.Errorf("error sending SIGTERM to process: %s", err)
+			}
+			return fmt.Errorf("killed process due to sigterm")
+		}
 	}
 	select {
 	case err := <-done:
 		// Will be nil if the channel was closed without any errors
 		return err
-	case <-time.After(conf.CmdTimeout):
-		// kill entire group of process spawned by our cmd.Process
-		pgid, err := syscall.Getpgid(cmd.Process.Pid)
-		lg.InfoD("killing-pgid", logger.M{"pgid": pgid})
-		if err != nil {
-			return fmt.Errorf("process timeout after %s. Unable to get pgid, error: %s", conf.CmdTimeout.String(), err.Error())
+	case <-conf.Halt:
+		if err := sigtermProcess(cmd.Process); err != nil {
+			return fmt.Errorf("error sending SIGTERM to process: %s", err)
 		}
-		// minus sign required to kill PGIDs
-		// we use SIGTERM so that the subprocess can gracefully exit
-		err = syscall.Kill(-pgid, syscall.SIGTERM)
-		if err != nil {
-			return fmt.Errorf("process timeout after %s. Unable to kill process, error: %s", conf.CmdTimeout.String(), err.Error())
+		return nil
+	case <-time.After(conf.CmdTimeout):
+		if err := sigtermProcess(cmd.Process); err != nil {
+			return fmt.Errorf("error timing out process after %s: %s", conf.CmdTimeout.String(), err)
 		}
 		return fmt.Errorf("process timed out after %s", conf.CmdTimeout.String())
 	}
+}
+
+func sigtermProcess(p *os.Process) error {
+	// kill entire group of process spawned by our cmd.Process
+	pgid, err := syscall.Getpgid(p.Pid)
+	if err != nil {
+		return fmt.Errorf("unable to get pgid, error: %s", err)
+	}
+	lg.InfoD("killing-pgid", logger.M{"pgid": pgid})
+	// minus sign required to kill PGIDs
+	// we use SIGTERM so that the subprocess can gracefully exit
+	if err := syscall.Kill(-pgid, syscall.SIGTERM); err != nil {
+		return fmt.Errorf("unable to kill process, error: %s", err)
+	}
+	return nil
 }
 
 // This function streams the reader to the Gearman job (through job.SendData())
