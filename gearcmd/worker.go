@@ -49,10 +49,11 @@ func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
 		lg.InfoD("rand-job-id", logger.M{"msg": "no job id parsed, random assigned."})
 	}
 
+	jobData := string(job.Data())
 	data := logger.M{
 		"function": conf.FunctionName,
 		"job_id":   jobID,
-		"job_data": string(job.Data()),
+		"job_data": jobData,
 	}
 
 	// This wraps the actual processing to do some logging
@@ -95,7 +96,9 @@ func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
 			lg.InfoD("duration", logger.M{
 				"value":    uint64(end.Sub(start).Seconds() * 1000),
 				"type":     "gauge",
-				"function": conf.FunctionName})
+				"function": conf.FunctionName,
+				"job_id":   jobID,
+				"job_data": jobData})
 			return nil, nil
 		}
 
