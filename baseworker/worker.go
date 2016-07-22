@@ -98,9 +98,9 @@ func NewWorker(name string, fn JobFunc) *Worker {
 		if ok {
 			lg.InfoD("err-disconnected-and-reconnecting", logger.M{"name": name, "error": e.Error()})
 			r := retrier.New(retrier.ExponentialBackoff(5, 200*time.Millisecond), nil)
-			if rc_err := r.Run(wdc.Reconnect); rc_err != nil {
-				lg.CriticalD("err-disconnected-fully", logger.M{"name": name, "error": rc_err.Error()})
-				defaultErrorHandler(rc_err)
+			if rcErr := r.Run(wdc.Reconnect); rcErr != nil {
+				lg.CriticalD("err-disconnected-fully", logger.M{"name": name, "error": rcErr.Error()})
+				defaultErrorHandler(rcErr)
 				return
 			}
 			lg.InfoD("gearman-reconnected", logger.M{"name": name})
