@@ -93,6 +93,7 @@ func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
 			data["success"] = true
 			lg.InfoD("END", data)
 			// Hopefully none of our jobs last long enough for a uint64...
+			// Note that we cannot use lg.GaugeIntD because duration is uint64
 			lg.InfoD("duration", logger.M{
 				"value":    uint64(end.Sub(start).Seconds() * 1000),
 				"type":     "gauge",
