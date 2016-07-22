@@ -77,7 +77,7 @@ func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
 			fmt.Sprintf("JOB_ID=%s", jobID),
 			fmt.Sprintf("WORK_DIR=%s", tempDirPath)}
 
-		err = conf.doProcess(job, extraEnvVars)
+		err = conf.doProcess(job, extraEnvVars, try)
 		end := time.Now()
 		data["type"] = "gauge"
 
@@ -125,13 +125,41 @@ func getJobID(job baseworker.Job) string {
 	return splits[len(splits)-1]
 }
 
-func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string) error {
+func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount int) error {
 	defer func() {
 		// If we panicked then set the panic message as a warning. Gearman-go will
 		// handle marking this job as failed.
 		if r := recover(); r != nil {
 			err := r.(error)
 			job.SendWarning([]byte(err.Error()))
+		}
+	}()
+
+	// shutdownTicker will effectively control the executution of the ticker.
+	shutdownTicker := make(chan interface{})
+	defer func() {
+		shutdownTicker <- 1
+	}()
+
+	// every minute we will output a heartbeat kayvee log for the job.
+	tickUnit := time.Minute
+	ticker := time.NewTicker(tickUnit)
+	go func() {
+		defer ticker.Stop()
+		units := 0
+		for {
+			select {
+			case <-shutdownTicker:
+				return
+			case <-ticker.C:
+				units++
+				lg.GaugeIntD("heartbeat", units, logger.M{
+					"try_number": tryCount,
+					"function":   job.Fn(),
+					"job_id":     getJobID(job),
+					"unit":       tickUnit.String(),
+				})
+			}
 		}
 	}()
 
