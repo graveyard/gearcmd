@@ -150,6 +150,7 @@ func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount 
 		for {
 			select {
 			case <-shutdownTicker:
+				close(shutdownTicker)
 				return
 			case <-ticker.C:
 				units++
