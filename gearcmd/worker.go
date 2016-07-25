@@ -154,7 +154,7 @@ func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount 
 				return
 			case <-ticker.C:
 				units++
-				lg.GaugeIntD("heartbeat", units, logger.M{
+				legacyLg.GaugeIntD("heartbeat", units, logger.M{
 					"try_number": tryCount,
 					"function":   job.Fn(),
 					"job_id":     getJobID(job),
