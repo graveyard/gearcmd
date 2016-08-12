@@ -1,6 +1,7 @@
 {
 	"ImportPath": "github.com/Clever/gearcmd",
 	"GoVersion": "go1.6.1",
+	"GodepVersion": "v74",
 	"Packages": [
 		"github.com/Clever/gearcmd/argsparser",
 		"github.com/Clever/gearcmd/baseworker",
@@ -26,8 +27,8 @@
 		},
 		{
 			"ImportPath": "gopkg.in/Clever/kayvee-go.v3",
-			"Comment": "v3.0.0-6-g5111b9f",
-			"Rev": "5111b9fd23e223f0dc9e2f196fdf7e4f3a48689a"
+			"Comment": "v3.2.1",
+			"Rev": "056c92dcc68b40c5d6045f755197b3776f914154"
 		},
 		{
 			"ImportPath": "gopkg.in/eapache/go-resiliency.v1/retrier",

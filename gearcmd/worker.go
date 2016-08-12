@@ -16,6 +16,7 @@ import (
 
 	"github.com/Clever/gearcmd/argsparser"
 	"github.com/Clever/gearcmd/baseworker"
+	"gopkg.in/Clever/kayvee-go.v3"
 	"gopkg.in/Clever/kayvee-go.v3/logger"
 )
 
@@ -30,33 +31,29 @@ type TaskConfig struct {
 	Halt         chan struct{}
 }
 
-var (
-	lg = logger.New("gearcmd")
-	// legacy logger used to maintain existing alerts.
-	// Once all workers are migrated to using gearcmd >= v0.5.0 and the alarms are switched over,
-	// then we can remove this logger
-	legacyLg = logger.New("gearman")
-)
-
 // Process runs the Gearman job by running the configured task.
 // We need to implement the Task interface so we return (byte[], error)
 // though the byte[] is always nil.
 func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
+	jobData := string(job.Data())
 	jobID := baseworker.GetJobID(job)
 	if jobID == "" {
 		jobID = strconv.Itoa(rand.Int())
-		lg.InfoD("rand-job-id", logger.M{"msg": "no job id parsed, random assigned."})
+		fmt.Println(kayvee.FormatLog("gearcmd", kayvee.Info, "rand-job-id",
+			logger.M{"msg": "no job id parsed, random assigned."}))
 	}
 
-	jobData := string(job.Data())
-	data := logger.M{
-		"function": conf.FunctionName,
-		"job_id":   jobID,
-		"job_data": jobData,
-	}
+	// NOTE: we create our logger(s) inline to ensure that they include valuable metadata such as
+	// 'job_id' and 'function' while still avoiding mutating the global state of the logger(s).
+	context := logger.M{"job_id": jobID, "function": conf.FunctionName}
+	lg := logger.NewWithContext("gearcmd", context)
+	// legacy logger used to maintain existing alerts.
+	// Once all workers are migrated to using gearcmd >= v0.5.0 and the alarms are switched over,
+	// then we can remove this logger
+	legacyLg := logger.NewWithContext("gearman", context)
 
 	// This wraps the actual processing to do some logging
-	lg.InfoD("START", data)
+	lg.InfoD("START", logger.M{"job_data": jobData})
 	start := time.Now()
 
 	for try := 0; try < conf.RetryCount+1; try++ {
@@ -76,49 +73,46 @@ func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
 			fmt.Sprintf("JOB_ID=%s", jobID),
 			fmt.Sprintf("WORK_DIR=%s", tempDirPath)}
 
-		err = conf.doProcess(job, extraEnvVars, try)
+		err = conf.doProcess(job, extraEnvVars, try, lg)
 		end := time.Now()
-		data["type"] = "gauge"
 
 		// Return if the job was successful.
 		if err == nil {
 			lg.InfoD("SUCCESS", logger.M{
-				"type":     "counter",
-				"function": conf.FunctionName})
+				"type": "counter"})
 			legacyLg.InfoD("success", logger.M{
-				"type":     "counter",
-				"function": conf.FunctionName})
-			data["value"] = 1
-			data["success"] = true
-			lg.InfoD("END", data)
+				"type": "counter"})
+			// NOTE: we roll our own guage function because we want to include the "success" key
+			lg.InfoD("END", logger.M{
+				"type":    "gauge",
+				"value":   1,
+				"success": true})
 			// Hopefully none of our jobs last long enough for a uint64...
 			// Note that we cannot use lg.GaugeIntD because duration is uint64
 			lg.InfoD("duration", logger.M{
 				"value":    uint64(end.Sub(start).Seconds() * 1000),
 				"type":     "gauge",
-				"function": conf.FunctionName,
-				"job_id":   jobID,
 				"job_data": jobData})
 			return nil, nil
 		}
 
-		data["value"] = 0
-		data["success"] = false
-		data["error_message"] = err.Error()
 		returnErr = err
-
 		if try != conf.RetryCount {
-			lg.ErrorD("RETRY", data)
+			lg.ErrorD("RETRY", logger.M{
+				"value":    0,
+				"success":  false,
+				"error":    err.Error(),
+				"job_data": jobData})
 		}
 	}
 
-	lg.InfoD("FAILURE", logger.M{"type": "counter", "function": conf.FunctionName})
-	legacyLg.InfoD("failure", logger.M{"type": "counter", "function": conf.FunctionName})
-	lg.ErrorD("END", data)
+	lg.InfoD("FAILURE", logger.M{"type": "counter"})
+	legacyLg.InfoD("failure", logger.M{"type": "counter"})
+	lg.ErrorD("END", logger.M{"job_data": jobData})
 	return nil, returnErr
 }
 
-func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount int) error {
+func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount int, lg *logger.Logger) error {
 	defer func() {
 		// If we panicked then set the panic message as a warning. Gearman-go will
 		// handle marking this job as failed.
@@ -149,8 +143,6 @@ func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount 
 				units++
 				lg.GaugeIntD("heartbeat", units, logger.M{
 					"try_number": tryCount,
-					"function":   job.Fn(),
-					"job_id":     baseworker.GetJobID(job),
 					"unit":       tickUnit.String(),
 				})
 			}
@@ -221,7 +213,7 @@ func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount 
 			// Will be nil if the channel was closed without any errors
 			return err
 		case <-conf.Halt:
-			if err := sigtermProcess(cmd.Process); err != nil {
+			if err := sigtermProcess(cmd.Process, lg); err != nil {
 				return fmt.Errorf("error sending SIGTERM to process: %s", err)
 			}
 			return fmt.Errorf("killed process due to sigterm")
@@ -232,19 +224,19 @@ func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount 
 		// Will be nil if the channel was closed without any errors
 		return err
 	case <-conf.Halt:
-		if err := sigtermProcess(cmd.Process); err != nil {
+		if err := sigtermProcess(cmd.Process, lg); err != nil {
 			return fmt.Errorf("error sending SIGTERM to process: %s", err)
 		}
 		return nil
 	case <-time.After(conf.CmdTimeout):
-		if err := sigtermProcess(cmd.Process); err != nil {
+		if err := sigtermProcess(cmd.Process, lg); err != nil {
 			return fmt.Errorf("error timing out process after %s: %s", conf.CmdTimeout.String(), err)
 		}
 		return fmt.Errorf("process timed out after %s", conf.CmdTimeout.String())
 	}
 }
 
-func sigtermProcess(p *os.Process) error {
+func sigtermProcess(p *os.Process, lg *logger.Logger) error {
 	// kill entire group of process spawned by our cmd.Process
 	pgid, err := syscall.Getpgid(p.Pid)
 	if err != nil {

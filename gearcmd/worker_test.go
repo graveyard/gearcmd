@@ -144,14 +144,6 @@ func TestStderrCapturedWarningsOnFailedJobs(t *testing.T) {
 	assert.Equal(t, warnings, [][]byte{[]byte("stderr7\n"), []byte("stderr8\n")})
 }
 
-func TestMockJobName(t *testing.T) {
-	mockJob := &mock.Job{GearmanHandle: "H:lap:123"}
-	assert.Equal(t, "123", getJobID(mockJob))
-
-	mockJob = &mock.Job{GearmanHandle: ""}
-	assert.Equal(t, "", getJobID(mockJob))
-}
-
 func TestRemoveQuotesIfParseArgs(t *testing.T) {
 	response := getSuccessResponse(`{"key":"value"}`, "testscripts/echoInput.sh", t)
 	assert.Equal(t, "{key:value}\n\n", response)
