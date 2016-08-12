@@ -6,6 +6,8 @@ SHELL := /bin/bash
 PKGS = $(shell go list ./...)
 $(eval $(call golang-version-check,1.6))
 
+export _DEPLOY_ENV=testing
+
 test: tests.json $(PKGS)
 
 $(PKGS): golang-test-all-strict-deps
