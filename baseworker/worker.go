@@ -38,7 +38,7 @@ type SigtermHandler func(*Worker)
 type Worker struct {
 	sync.Mutex
 	fn   gearmanWorker.JobFunc
-	name string
+	name string // this is also known as "function"
 	w    *gearmanWorker.Worker
 }
 
@@ -50,7 +50,10 @@ func (worker *Worker) Listen(host, port string) error {
 	worker.w.AddServer("tcp4", fmt.Sprintf("%s:%s", host, port))
 	worker.w.AddFunc(worker.name, worker.fn, gearmanWorker.Unlimited)
 	if err := worker.w.Ready(); err != nil {
-		lg.CriticalD("worker-error", logger.M{"error": err.Error()})
+		lg.CriticalD("worker-error", logger.M{
+			"job_id":   worker.w.Id,
+			"function": worker.name,
+			"error":    err.Error()})
 		os.Exit(1)
 	}
 	worker.w.Work()
@@ -68,23 +71,33 @@ func (worker *Worker) Close() {
 func (worker *Worker) Shutdown() {
 	worker.Lock()
 	defer worker.Unlock()
-	lg.InfoD("shutdown", logger.M{"message": "Received sigterm. Shutting down gracefully."})
+	lg.InfoD("shutdown", logger.M{
+		"message":  "Received sigterm. Shutting down gracefully.",
+		"job_id":   worker.w.Id,
+		"function": worker.name,
+	})
 	if worker.w != nil {
 		// Shutdown blocks, waiting for all jobs to finish
 		worker.w.Shutdown()
 	}
 }
 
-func defaultErrorHandler(e error) {
-	lg.InfoD("gearman-error", logger.M{"error": e.Error()})
+func defaultErrorHandler(functionName string, e error) {
+	lg.InfoD("gearman-error", logger.M{
+		"function": functionName,
+		"error":    e.Error()})
 	if opErr, ok := e.(*net.OpError); ok {
 		if !opErr.Temporary() {
 			proc, err := os.FindProcess(os.Getpid())
 			if err != nil {
-				lg.CriticalD("err-getpid", logger.M{"error": err.Error()})
+				lg.CriticalD("err-getpid", logger.M{
+					"function": functionName,
+					"error":    err.Error()})
 			}
 			if err := proc.Signal(os.Interrupt); err != nil {
-				lg.CriticalD("err-interrupt", logger.M{"error": err.Error()})
+				lg.CriticalD("err-interrupt", logger.M{
+					"function": functionName,
+					"error":    err.Error()})
 			}
 		}
 	}
@@ -103,16 +116,20 @@ func NewWorker(name string, fn JobFunc) *Worker {
 		// Try to reconnect if it is a disconnect error
 		wdc, ok := e.(*gearmanWorker.WorkerDisconnectError)
 		if ok {
-			lg.InfoD("err-disconnected-and-reconnecting", logger.M{"name": name, "error": e.Error()})
+			lg.InfoD("err-disconnected-and-reconnecting", logger.M{
+				"function": name,
+				"error":    e.Error()})
 			r := retrier.New(retrier.ExponentialBackoff(5, 200*time.Millisecond), nil)
 			if rcErr := r.Run(wdc.Reconnect); rcErr != nil {
-				lg.CriticalD("err-disconnected-fully", logger.M{"name": name, "error": rcErr.Error()})
-				defaultErrorHandler(rcErr)
+				lg.CriticalD("err-disconnected-fully", logger.M{
+					"function": name,
+					"error":    rcErr.Error()})
+				defaultErrorHandler(name, rcErr)
 				return
 			}
-			lg.InfoD("gearman-reconnected", logger.M{"name": name})
+			lg.InfoD("gearman-reconnected", logger.M{"function": name})
 		} else {
-			defaultErrorHandler(e)
+			defaultErrorHandler(name, e)
 		}
 	}
 	worker := &Worker{
