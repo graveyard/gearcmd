@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,6 +23,12 @@ type JobFunc func(Job) ([]byte, error)
 
 // Job is an alias for http://godoc.org/github.com/mikespook/gearman-go/worker#Job.
 type Job gearmanWorker.Job
+
+// GetJobID returns the job_id from the job handle
+func GetJobID(j Job) string {
+	splits := strings.Split(j.Handle(), ":")
+	return splits[len(splits)-1]
+}
 
 // SigtermHandler is the definition for the function called after the worker receives
 // a TERM signal.

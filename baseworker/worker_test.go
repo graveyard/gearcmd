@@ -11,7 +11,16 @@ import (
 	"time"
 
 	"github.com/Clever/gearcmd/baseworker/mock"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestMockJobName(t *testing.T) {
+	mockJob := &mock.Job{GearmanHandle: "H:lap:123"}
+	assert.Equal(t, "123", GetJobID(mockJob))
+
+	mockJob = &mock.Job{GearmanHandle: ""}
+	assert.Equal(t, "", GetJobID(mockJob))
+}
 
 // TestJobFuncConversion tests that our JobFunc is called when 'worker.fn' is called with a job.
 func TestJobFuncConversion(t *testing.T) {

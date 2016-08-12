@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -43,7 +42,7 @@ var (
 // We need to implement the Task interface so we return (byte[], error)
 // though the byte[] is always nil.
 func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
-	jobID := getJobID(job)
+	jobID := baseworker.GetJobID(job)
 	if jobID == "" {
 		jobID = strconv.Itoa(rand.Int())
 		lg.InfoD("rand-job-id", logger.M{"msg": "no job id parsed, random assigned."})
@@ -119,12 +118,6 @@ func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
 	return nil, returnErr
 }
 
-// getJobID returns the jobId from the job handle
-func getJobID(job baseworker.Job) string {
-	splits := strings.Split(job.Handle(), ":")
-	return splits[len(splits)-1]
-}
-
 func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount int) error {
 	defer func() {
 		// If we panicked then set the panic message as a warning. Gearman-go will
@@ -157,7 +150,7 @@ func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount 
 				lg.GaugeIntD("heartbeat", units, logger.M{
 					"try_number": tryCount,
 					"function":   job.Fn(),
-					"job_id":     getJobID(job),
+					"job_id":     baseworker.GetJobID(job),
 					"unit":       tickUnit.String(),
 				})
 			}
