@@ -186,17 +186,21 @@ func TestEnvJobIDInsertion(t *testing.T) {
 	assert.Contains(t, response, "WORK_DIR=/tmp/name-123-0")
 }
 
-func TestHalt(t *testing.T) {
+func TestHaltGraceful(t *testing.T) {
 	mockJob := mock.CreateMockJob("IgnorePayload")
 	haltChan := make(chan struct{})
-	close(haltChan)
+	go func() {
+		time.Sleep(1 * time.Second)
+		close(haltChan)
+	}()
 	config := TaskConfig{
 		FunctionName: "name",
 		FunctionCmd:  "testscripts/stderrAndHang.sh",
 		WarningLines: 2,
 		ParseArgs:    true,
+		CmdTimeout:   2 * time.Second,
 		Halt:         haltChan,
 	}
 	_, err := config.Process(mockJob)
-	assert.EqualError(t, err, "killed process due to sigterm")
+	assert.NoError(t, err)
 }

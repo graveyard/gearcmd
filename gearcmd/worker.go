@@ -228,8 +228,8 @@ func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount 
 			// Will be nil if the channel was closed without any errors
 			return err
 		case <-conf.Halt:
-			if err := sigtermProcess(cmd.Process); err != nil {
-				return fmt.Errorf("error sending SIGTERM to process: %s", err)
+			if err := stopProcess(cmd.Process, conf.CmdTimeout); err != nil {
+				return fmt.Errorf("error stopping process: %s", err)
 			}
 			return fmt.Errorf("killed process due to sigterm")
 		}
@@ -239,29 +239,35 @@ func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount 
 		// Will be nil if the channel was closed without any errors
 		return err
 	case <-conf.Halt:
-		if err := sigtermProcess(cmd.Process); err != nil {
-			return fmt.Errorf("error sending SIGTERM to process: %s", err)
+		if err := stopProcess(cmd.Process, conf.CmdTimeout); err != nil {
+			return fmt.Errorf("error stopping process: %s", err)
 		}
 		return nil
 	case <-time.After(conf.CmdTimeout):
-		if err := sigtermProcess(cmd.Process); err != nil {
+		if err := stopProcess(cmd.Process, 0); err != nil {
 			return fmt.Errorf("error timing out process after %s: %s", conf.CmdTimeout.String(), err)
 		}
 		return fmt.Errorf("process timed out after %s", conf.CmdTimeout.String())
 	}
 }
 
-func sigtermProcess(p *os.Process) error {
-	// kill entire group of process spawned by our cmd.Process
-	pgid, err := syscall.Getpgid(p.Pid)
-	if err != nil {
-		return fmt.Errorf("unable to get pgid, error: %s", err)
+// stopProcess kills a given process. It's second argument is a grace period, if > 0, SIGTERM will
+// be sent first folloed by SIGKILL after the grace period is over. If the grace period is 0, this
+// is simply a hard SIGKILL.
+func stopProcess(p *os.Process, gracePeriod time.Duration) error {
+	lg.InfoD("killing-pid", logger.M{"pid": p.Pid})
+	if gracePeriod > 0 {
+		// we use SIGTERM so that the subprocess can gracefully exit
+		if err := syscall.Kill(p.Pid, syscall.SIGTERM); err != nil {
+			return fmt.Errorf("unable to send SIGTERM, error: %s", err)
+		}
+		time.Sleep(gracePeriod)
 	}
-	lg.InfoD("killing-pgid", logger.M{"pgid": pgid})
-	// minus sign required to kill PGIDs
-	// we use SIGTERM so that the subprocess can gracefully exit
-	if err := syscall.Kill(-pgid, syscall.SIGTERM); err != nil {
-		return fmt.Errorf("unable to kill process, error: %s", err)
+	if err := syscall.Kill(p.Pid, syscall.SIGKILL); err != nil {
+		// The graceful shutdown may have completed, so we don't error in that case.
+		if gracePeriod == 0 || !strings.Contains(err.Error(), "no such process") {
+			return fmt.Errorf("unable to send SIGKILL, error: %s", err)
+		}
 	}
 	return nil
 }
