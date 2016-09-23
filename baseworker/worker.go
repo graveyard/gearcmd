@@ -49,6 +49,8 @@ func (worker *Worker) Listen(host, port string) error {
 	}
 	worker.w.AddServer("tcp4", fmt.Sprintf("%s:%s", host, port))
 	worker.w.AddFunc(worker.name, worker.fn, gearmanWorker.Unlimited)
+
+	worker.w.Lock()
 	if err := worker.w.Ready(); err != nil {
 		lg.CriticalD("worker-error", logger.M{
 			"job_id":   worker.w.Id,
@@ -56,6 +58,8 @@ func (worker *Worker) Listen(host, port string) error {
 			"error":    err.Error()})
 		os.Exit(1)
 	}
+	worker.w.Unlock()
+
 	worker.w.Work()
 	return nil
 }
@@ -71,6 +75,7 @@ func (worker *Worker) Close() {
 func (worker *Worker) Shutdown() {
 	worker.Lock()
 	defer worker.Unlock()
+
 	lg.InfoD("shutdown", logger.M{
 		"message":  "Received sigterm. Shutting down gracefully.",
 		"job_id":   worker.w.Id,
