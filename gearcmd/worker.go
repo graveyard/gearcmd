@@ -33,10 +33,6 @@ type TaskConfig struct {
 
 var (
 	lg = logger.New("gearcmd")
-	// legacy logger used to maintain existing alerts.
-	// Once all workers are migrated to using gearcmd >= v0.5.0 and the alarms are switched over,
-	// then we can remove this logger
-	legacyLg = logger.New("gearman")
 )
 
 // Process runs the Gearman job by running the configured task.
@@ -86,9 +82,6 @@ func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
 			lg.InfoD("SUCCESS", logger.M{
 				"type":     "counter",
 				"function": conf.FunctionName})
-			legacyLg.InfoD("success", logger.M{
-				"type":     "counter",
-				"function": conf.FunctionName})
 			data["value"] = 1
 			data["success"] = true
 			lg.InfoD("END", data)
@@ -114,7 +107,6 @@ func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
 	}
 
 	lg.InfoD("FAILURE", logger.M{"type": "counter", "function": conf.FunctionName})
-	legacyLg.InfoD("failure", logger.M{"type": "counter", "function": conf.FunctionName})
 	lg.ErrorD("END", data)
 	return nil, returnErr
 }
