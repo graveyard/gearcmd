@@ -301,10 +301,13 @@ func sendStderrWarnings(buffer io.Reader, job baseworker.Job, warningLines int) 
 	}
 	// Walk forward through the buffer to get all the last X entries. Note that we call next first
 	// so that we start at the oldest entry.
+	stderrbuf := []byte{}
 	for i := 0; i < lastStderrLines.Len(); i++ {
 		if lastStderrLines = lastStderrLines.Next(); lastStderrLines.Value != nil {
-			job.SendWarning(append(lastStderrLines.Value.([]byte), byte('\n')))
+			stderrbuf = append(stderrbuf, lastStderrLines.Value.([]byte)...)
+			stderrbuf = append(stderrbuf, '\n')
 		}
 	}
+	job.SendWarning(stderrbuf)
 	return scanner.Err()
 }
