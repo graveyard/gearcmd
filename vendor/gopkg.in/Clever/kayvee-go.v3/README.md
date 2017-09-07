@@ -7,6 +7,9 @@ with a "json" format.
 
 ## [Logger API Documentation](./logger)
 
+* (gopkg.in/Clever/kayvee-go.v3/logger)[https://godoc.org/gopkg.in/Clever/kayvee-go.v3/logger]
+* (gopkg.in/Clever/kayvee-go.v3/middleware)[https://godoc.org/gopkg.in/Clever/kayvee-go.v3/middleware]
+
 ## Example
 
 ```go
