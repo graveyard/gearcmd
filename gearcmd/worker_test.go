@@ -223,14 +223,15 @@ func TestProcessWithErrorBackoff(t *testing.T) {
 	mockClock := clock.NewMock()
 	gearcmdconfig.Clock = mockClock
 	defer func() {
+		// reset clock to non-mock clock
 		gearcmdconfig.Clock = clock.New()
 	}()
 
-	assert.Equal(t, config.errorResultsBackoff, 0)
+	assert.Equal(t, config.currentErrorResultsBackoff, 0)
 	response, err := config.ProcessWithErrorBackoff(mockJob)
 	assert.Nil(t, response)
 	assert.EqualError(t, err, "exit status 2")
-	assert.Equal(t, config.errorResultsBackoff, config.ErrorResultsBackoffRate)
+	assert.Equal(t, config.currentErrorResultsBackoff, config.ErrorResultsBackoffRate)
 
 	done := make(chan bool)
 	go func() {
@@ -239,10 +240,11 @@ func TestProcessWithErrorBackoff(t *testing.T) {
 		assert.EqualError(t, err, "exit status 2")
 		done <- true
 	}()
+	// wait for the job to get blocked on clock.Sleep
 	time.Sleep(100 * time.Millisecond)
-	assert.Equal(t, config.errorResultsBackoff, config.ErrorResultsBackoffRate)
+	assert.Equal(t, config.currentErrorResultsBackoff, config.ErrorResultsBackoffRate)
 	mockClock.Add(config.ErrorResultsBackoffRate)
 	<-done
-	assert.Equal(t, config.errorResultsBackoff, config.ErrorResultsBackoffRate*2)
+	assert.Equal(t, config.currentErrorResultsBackoff, config.ErrorResultsBackoffRate*2)
 
 }

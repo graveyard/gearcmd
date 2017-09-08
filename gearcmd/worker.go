@@ -34,7 +34,8 @@ type TaskConfig struct {
 	Halt                    chan struct{}
 	LastResults             *ring.Ring
 	ErrorResultsBackoffRate time.Duration
-	errorResultsBackoff     time.Duration
+	// this variable tracks how much to backoff if another failure happens
+	currentErrorResultsBackoff time.Duration
 }
 
 var (
@@ -55,22 +56,24 @@ func (conf *TaskConfig) ProcessWithErrorBackoff(job baseworker.Job) (b []byte, r
 	conf.LastResults.Value = returnErr
 	conf.LastResults = conf.LastResults.Next()
 
-	allErrors := true
+	// default to assume error and loop through last results to find any previously succesful jobs
+	allPreviousJobsResultedInError := true
 	conf.LastResults.Do(func(value interface{}) {
 		if value == nil {
-			allErrors = false
+			// successful result
+			allPreviousJobsResultedInError = false
 		}
 	})
-	conf.errorResultsBackoff = time.Duration(math.Min(float64(conf.errorResultsBackoff), float64(60*time.Second)))
-	if allErrors {
-		lg.WarnD("sleeping-too-many-errors", logger.M{
-			"error_count": conf.LastResults.Len(),
-			"sleep_time":  conf.errorResultsBackoff,
+	conf.currentErrorResultsBackoff = time.Duration(math.Min(float64(conf.currentErrorResultsBackoff), float64(60*time.Second)))
+	if allPreviousJobsResultedInError {
+		lg.WarnD("timeout-due-to-errors", logger.M{
+			"error_count":      conf.LastResults.Len(),
+			"backoff_duration": conf.currentErrorResultsBackoff,
 		})
-		config.Clock.Sleep(conf.errorResultsBackoff)
-		conf.errorResultsBackoff = conf.errorResultsBackoff * 2
+		config.Clock.Sleep(conf.currentErrorResultsBackoff)
+		conf.currentErrorResultsBackoff = conf.currentErrorResultsBackoff * 2
 	} else {
-		conf.errorResultsBackoff = conf.ErrorResultsBackoffRate
+		conf.currentErrorResultsBackoff = conf.ErrorResultsBackoffRate
 	}
 	return b, returnErr
 }

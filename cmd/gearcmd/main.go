@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/Clever/discovery-go"
 	"github.com/Clever/gearcmd/baseworker"
@@ -30,7 +31,7 @@ func main() {
 	warningLength := flag.Int("warningLength", 5, "Number of warning lines to store and send back to the gearmn job")
 	passSigterm := flag.Bool("pass-sigterm", false, "Whether or not to pass SIGTERM through to the worker process")
 	errorBackoffCount := flag.Int("error-backoff-count", 5, "How many errors in a row before we wait before erroring jobs")
-	errorBackoffRate := flag.Duration("error-backoff-rate", 0, "How much time to sleep if last 'error-backoff-count' jobs have failed, e.g. 500ms, 1s")
+	errorBackoffRate := flag.Duration("error-backoff-rate", 5*time.Second, "How much time to sleep if last 'error-backoff-count' jobs have failed, e.g. 500ms, 1s")
 	flag.Parse()
 
 	if *printVersion {
