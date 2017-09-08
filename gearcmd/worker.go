@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -17,18 +18,24 @@ import (
 
 	"github.com/Clever/gearcmd/argsparser"
 	"github.com/Clever/gearcmd/baseworker"
+	"github.com/Clever/gearcmd/config"
 	"gopkg.in/Clever/kayvee-go.v3/logger"
 )
 
 // TaskConfig defines the configuration for the task.
+// Use constructor for a new struct
 type TaskConfig struct {
-	FunctionName string
-	FunctionCmd  string
-	WarningLines int
-	ParseArgs    bool
-	CmdTimeout   time.Duration
-	RetryCount   int
-	Halt         chan struct{}
+	FunctionName            string
+	FunctionCmd             string
+	WarningLines            int
+	ParseArgs               bool
+	CmdTimeout              time.Duration
+	RetryCount              int
+	Halt                    chan struct{}
+	LastResults             *ring.Ring
+	ErrorResultsBackoffRate time.Duration
+	// this variable tracks how much to backoff if another failure happens
+	currentErrorResultsBackoff time.Duration
 }
 
 var (
@@ -39,10 +46,42 @@ var (
 	legacyLg = logger.New("gearman")
 )
 
+// ProcessWithErrorBackoff calls Process and sleeps if the last N jobs returned an error
+func (conf *TaskConfig) ProcessWithErrorBackoff(job baseworker.Job) (b []byte, returnErr error) {
+	b, returnErr = conf.Process(job)
+	if conf.LastResults == nil || conf.ErrorResultsBackoffRate == 0 {
+		return b, returnErr
+	}
+
+	conf.LastResults.Value = returnErr
+	conf.LastResults = conf.LastResults.Next()
+
+	// default to assume error and loop through last results to find any previously succesful jobs
+	allPreviousJobsResultedInError := true
+	conf.LastResults.Do(func(value interface{}) {
+		if value == nil {
+			// successful result
+			allPreviousJobsResultedInError = false
+		}
+	})
+	conf.currentErrorResultsBackoff = time.Duration(math.Min(float64(conf.currentErrorResultsBackoff), float64(60*time.Second)))
+	if allPreviousJobsResultedInError {
+		lg.WarnD("timeout-due-to-errors", logger.M{
+			"error_count":      conf.LastResults.Len(),
+			"backoff_duration": conf.currentErrorResultsBackoff,
+		})
+		config.Clock.Sleep(conf.currentErrorResultsBackoff)
+		conf.currentErrorResultsBackoff = conf.currentErrorResultsBackoff * 2
+	} else {
+		conf.currentErrorResultsBackoff = conf.ErrorResultsBackoffRate
+	}
+	return b, returnErr
+}
+
 // Process runs the Gearman job by running the configured task.
 // We need to implement the Task interface so we return (byte[], error)
 // though the byte[] is always nil.
-func (conf TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
+func (conf *TaskConfig) Process(job baseworker.Job) (b []byte, returnErr error) {
 	jobID := getJobID(job)
 	if jobID == "" {
 		jobID = strconv.Itoa(rand.Int())
@@ -125,7 +164,7 @@ func getJobID(job baseworker.Job) string {
 	return splits[len(splits)-1]
 }
 
-func (conf TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount int) error {
+func (conf *TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount int) error {
 	defer func() {
 		// If we panicked then set the panic message as a warning. Gearman-go will
 		// handle marking this job as failed.

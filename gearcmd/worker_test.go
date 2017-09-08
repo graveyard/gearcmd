@@ -2,6 +2,7 @@ package gearcmd
 
 import (
 	"bytes"
+	"container/ring"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"time"
 
 	mock "github.com/Clever/gearcmd/baseworker/mock"
+	gearcmdconfig "github.com/Clever/gearcmd/config"
+	"github.com/facebookgo/clock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -201,4 +204,47 @@ func TestHaltGraceful(t *testing.T) {
 	}
 	_, err := config.Process(mockJob)
 	assert.NoError(t, err)
+}
+
+func TestProcessWithErrorBackoff(t *testing.T) {
+	// Get a temp file for the script to hold its state.
+	file, err := ioutil.TempFile("", "temp")
+	assert.NoError(t, err)
+	filename := file.Name()
+	defer os.Remove(filename)
+	defer file.Close()
+	mockJob := mock.CreateMockJob(filename)
+	config := TaskConfig{
+		FunctionName:            "name",
+		FunctionCmd:             "testscripts/nonZeroExit.sh",
+		LastResults:             ring.New(2),
+		ErrorResultsBackoffRate: 10 * time.Millisecond,
+	}
+	mockClock := clock.NewMock()
+	gearcmdconfig.Clock = mockClock
+	defer func() {
+		// reset clock to non-mock clock
+		gearcmdconfig.Clock = clock.New()
+	}()
+
+	assert.Equal(t, config.currentErrorResultsBackoff, 0)
+	response, err := config.ProcessWithErrorBackoff(mockJob)
+	assert.Nil(t, response)
+	assert.EqualError(t, err, "exit status 2")
+	assert.Equal(t, config.currentErrorResultsBackoff, config.ErrorResultsBackoffRate)
+
+	done := make(chan bool)
+	go func() {
+		response, err := config.ProcessWithErrorBackoff(mockJob)
+		assert.Nil(t, response)
+		assert.EqualError(t, err, "exit status 2")
+		done <- true
+	}()
+	// wait for the job to get blocked on clock.Sleep
+	time.Sleep(100 * time.Millisecond)
+	assert.Equal(t, config.currentErrorResultsBackoff, config.ErrorResultsBackoffRate)
+	mockClock.Add(config.ErrorResultsBackoffRate)
+	<-done
+	assert.Equal(t, config.currentErrorResultsBackoff, config.ErrorResultsBackoffRate*2)
+
 }

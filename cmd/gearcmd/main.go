@@ -1,11 +1,13 @@
 package main
 
 import (
+	"container/ring"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/Clever/discovery-go"
 	"github.com/Clever/gearcmd/baseworker"
@@ -28,6 +30,8 @@ func main() {
 	retryCount := flag.Int("retry", 0, "Number of times to retry the job if it fails")
 	warningLength := flag.Int("warningLength", 5, "Number of warning lines to store and send back to the gearmn job")
 	passSigterm := flag.Bool("pass-sigterm", false, "Whether or not to pass SIGTERM through to the worker process")
+	errorBackoffCount := flag.Int("error-backoff-count", 5, "How many errors in a row before we wait before erroring jobs")
+	errorBackoffRate := flag.Duration("error-backoff-rate", 5*time.Second, "How much time to sleep if last 'error-backoff-count' jobs have failed, e.g. 500ms, 1s")
 	flag.Parse()
 
 	if *printVersion {
@@ -57,15 +61,17 @@ func main() {
 	}
 
 	config := gearcmd.TaskConfig{
-		FunctionName: *functionName,
-		FunctionCmd:  *functionCmd,
-		WarningLines: *warningLength,
-		ParseArgs:    *parseArgs,
-		CmdTimeout:   *cmdTimeout,
-		RetryCount:   *retryCount,
-		Halt:         make(chan struct{}),
+		FunctionName:            *functionName,
+		FunctionCmd:             *functionCmd,
+		WarningLines:            *warningLength,
+		ParseArgs:               *parseArgs,
+		CmdTimeout:              *cmdTimeout,
+		RetryCount:              *retryCount,
+		Halt:                    make(chan struct{}),
+		LastResults:             ring.New(*errorBackoffCount),
+		ErrorResultsBackoffRate: *errorBackoffRate,
 	}
-	worker := baseworker.NewWorker(*functionName, config.Process)
+	worker := baseworker.NewWorker(*functionName, config.ProcessWithErrorBackoff)
 	defer worker.Close()
 
 	sigc := make(chan os.Signal, 1)
