@@ -302,7 +302,14 @@ func stopProcess(p *os.Process, gracePeriod time.Duration) error {
 		}
 		time.Sleep(gracePeriod)
 	}
-	if err := syscall.Kill(p.Pid, syscall.SIGKILL); err != nil {
+	// kill entire group of process spawned by our cmd.Process
+	pgid, err := syscall.Getpgid(p.Pid)
+	if err != nil {
+		return fmt.Errorf("unable to get pgid, error: %s", err)
+	}
+	lg.InfoD("killing-pgid", logger.M{"pid": p.Pid})
+	// minus sign required to kill PGIDs
+	if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
 		// The graceful shutdown may have completed, so we don't error in that case.
 		if gracePeriod == 0 || !strings.Contains(err.Error(), "no such process") {
 			return fmt.Errorf("unable to send SIGKILL, error: %s", err)
