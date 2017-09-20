@@ -294,7 +294,7 @@ func (conf *TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount
 // be sent first folloed by SIGKILL after the grace period is over. If the grace period is 0, this
 // is simply a hard SIGKILL.
 func stopProcess(p *os.Process, gracePeriod time.Duration) error {
-	lg.InfoD("killing-pid", logger.M{"pid": p.Pid})
+	lg.InfoD("stopping-process", logger.M{"pid": p.Pid, "grace_period": gracePeriod})
 	if gracePeriod > 0 {
 		// we use SIGTERM so that the subprocess can gracefully exit
 		if err := syscall.Kill(p.Pid, syscall.SIGTERM); err != nil {
@@ -302,7 +302,18 @@ func stopProcess(p *os.Process, gracePeriod time.Duration) error {
 		}
 		time.Sleep(gracePeriod)
 	}
-	if err := syscall.Kill(p.Pid, syscall.SIGKILL); err != nil {
+	// kill entire group of process spawned by our cmd.Process
+	targetID := p.Pid
+	pgid, err := syscall.Getpgid(p.Pid)
+	if err != nil {
+		lg.InfoD("unable-to-get-pgid", logger.M{"pid": p.Pid})
+	} else {
+		// minus sign required to kill PGIDs
+		// https://linux.die.net/man/2/kill
+		targetID = -pgid
+	}
+	lg.InfoD("killing-pid", logger.M{"pid": p.Pid, "target_id": targetID})
+	if err := syscall.Kill(targetID, syscall.SIGKILL); err != nil {
 		// The graceful shutdown may have completed, so we don't error in that case.
 		if gracePeriod == 0 || !strings.Contains(err.Error(), "no such process") {
 			return fmt.Errorf("unable to send SIGKILL, error: %s", err)
