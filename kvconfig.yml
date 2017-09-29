@@ -1,0 +1,9 @@
+routes:
+  worker-timed-out:
+    matchers:
+      title: [ "worker-timed-out" ]
+    output:
+      type: "alerts"
+      series: "gearcmd.worker_timed_out"
+      dimensions: [ "function" ]
+      stat_type: "counter"

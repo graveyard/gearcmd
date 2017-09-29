@@ -260,6 +260,18 @@ func (conf *TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount
 	}()
 	<-started
 
+	timedOut := false
+	defer func() {
+		timedOutCount := 0
+		if timedOut {
+			timedOutCount = 1
+		}
+		lg.CounterD("worker-timed-out", timedOutCount, logger.M{
+			"timeout":  conf.CmdTimeout,
+			"function": conf.FunctionName,
+		})
+	}()
+
 	// No timeout
 	if conf.CmdTimeout == 0 {
 		select {
@@ -283,6 +295,7 @@ func (conf *TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount
 		}
 		return nil
 	case <-time.After(conf.CmdTimeout):
+		timedOut = true
 		if err := stopProcess(cmd.Process, 0); err != nil {
 			return fmt.Errorf("error timing out process after %s: %s", conf.CmdTimeout.String(), err)
 		}

@@ -22,12 +22,16 @@ test: $(PKGS)
 $(PKGS): golang-test-all-deps cmd/gearcmd/version.go
 	$(call golang-test-all,$@)
 
-build/*: cmd/gearcmd/version.go
+build/*: cmd/gearcmd/version.go bindata-kvconfig
 cmd/gearcmd/version.go: VERSION
 	@echo 'package main' > $@
 	@echo '' >> $@  # Write a go file that lints :)
 	@echo '// Version denotes the version of the executable' >> $@ # golint compliance
 	echo 'const Version = "$(VERSION)"' >> $@
+
+bindata-kvconfig:
+	go get -u github.com/jteeuwen/go-bindata/...
+	go-bindata -pkg config -o "./config/kvconfig.go" kvconfig.yml
 
 build/$(EXECUTABLE)-v$(VERSION)-darwin-amd64:
 	GOARCH=amd64 GOOS=darwin go build -o "$@/$(EXECUTABLE)" $(PKG)
