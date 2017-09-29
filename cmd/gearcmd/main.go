@@ -12,7 +12,7 @@ import (
 	"github.com/Clever/discovery-go"
 	"github.com/Clever/gearcmd/baseworker"
 	"github.com/Clever/gearcmd/gearcmd"
-	"gopkg.in/Clever/kayvee-go.v3/logger"
+	"gopkg.in/Clever/kayvee-go.v6/logger"
 )
 
 var (

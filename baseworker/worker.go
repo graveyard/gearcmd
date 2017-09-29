@@ -9,7 +9,7 @@ import (
 	"time"
 
 	gearmanWorker "github.com/Clever/gearman-go/worker"
-	"gopkg.in/Clever/kayvee-go.v3/logger"
+	"gopkg.in/Clever/kayvee-go.v6/logger"
 	"gopkg.in/eapache/go-resiliency.v1/retrier"
 )
 
