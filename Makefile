@@ -32,6 +32,7 @@ cmd/gearcmd/version.go: VERSION
 bindata-kvconfig:
 	go get -u github.com/jteeuwen/go-bindata/...
 	go-bindata -pkg config -o "./config/kvconfig.go" kvconfig.yml
+	gofmt -w config/kvconfig.go config/kvconfig.go
 
 build/$(EXECUTABLE)-v$(VERSION)-darwin-amd64:
 	GOARCH=amd64 GOOS=darwin go build -o "$@/$(EXECUTABLE)" $(PKG)

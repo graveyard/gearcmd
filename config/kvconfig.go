@@ -83,7 +83,7 @@ func kvconfigYml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "kvconfig.yml", size: 212, mode: os.FileMode(420), modTime: time.Unix(1506721056, 0)}
+	info := bindataFileInfo{name: "kvconfig.yml", size: 212, mode: os.FileMode(420), modTime: time.Unix(1506728702, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -182,6 +182,7 @@ type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
+
 var _bintree = &bintree{nil, map[string]*bintree{
 	"kvconfig.yml": &bintree{kvconfigYml, map[string]*bintree{}},
 }}
@@ -232,4 +233,3 @@ func _filePath(dir, name string) string {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
-
