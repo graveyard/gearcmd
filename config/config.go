@@ -14,5 +14,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	logger.SetGlobalRoutingFromBytes(data)
+	err = logger.SetGlobalRoutingFromBytes(data)
+	if err != nil {
+		panic(err)
+	}
 }
