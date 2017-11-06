@@ -75,7 +75,7 @@ func main() {
 	defer worker.Close()
 
 	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, syscall.SIGTERM)
+	signal.Notify(sigc, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		<-sigc
 		if *passSigterm {
