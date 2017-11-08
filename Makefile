@@ -22,7 +22,6 @@ test: $(PKGS)
 $(PKGS): golang-test-all-deps cmd/gearcmd/version.go
 	$(call golang-test-all,$@)
 
-build/*: cmd/gearcmd/version.go bindata-kvconfig
 cmd/gearcmd/version.go: VERSION
 	@echo 'package main' > $@
 	@echo '' >> $@  # Write a go file that lints :)
@@ -38,7 +37,7 @@ build/$(EXECUTABLE)-v$(VERSION)-darwin-amd64:
 	GOARCH=amd64 GOOS=darwin go build -o "$@/$(EXECUTABLE)" $(PKG)
 build/$(EXECUTABLE)-v$(VERSION)-linux-amd64:
 	GOARCH=amd64 GOOS=linux go build -o "$@/$(EXECUTABLE)" $(PKG)
-build: clean $(BUILDS)
+build: clean cmd/gearcmd/version.go bindata-kvconfig $(BUILDS)
 
 %.tar.gz: %
 	tar -C `dirname $<` -zcvf "$<.tar.gz" `basename $<`

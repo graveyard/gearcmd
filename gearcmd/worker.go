@@ -34,6 +34,7 @@ type TaskConfig struct {
 	Halt                    chan struct{}
 	LastResults             *ring.Ring
 	ErrorResultsBackoffRate time.Duration
+	SigtermGracePeriod      time.Duration
 	// this variable tracks how much to backoff if another failure happens
 	currentErrorResultsBackoff time.Duration
 }
@@ -279,7 +280,7 @@ func (conf *TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount
 			// Will be nil if the channel was closed without any errors
 			return err
 		case <-conf.Halt:
-			if err := stopProcess(cmd.Process, conf.CmdTimeout); err != nil {
+			if err := stopProcess(cmd.Process, conf.SigtermGracePeriod); err != nil {
 				return fmt.Errorf("error stopping process: %s", err)
 			}
 			return fmt.Errorf("killed process due to sigterm")
@@ -303,34 +304,56 @@ func (conf *TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount
 	}
 }
 
-// stopProcess kills a given process. It's second argument is a grace period, if > 0, SIGTERM will
-// be sent first folloed by SIGKILL after the grace period is over. If the grace period is 0, this
-// is simply a hard SIGKILL.
+// stopProcess kills a given process. It's second argument is a grace period.
+// If, after the grace period, the process hasn't exited, SIGKILL will be sent.
+// It also calls os.Exit, since we currently rely on cutting off the connection
+// with gearmand to trigger reassignment of work to another worker.
 func stopProcess(p *os.Process, gracePeriod time.Duration) error {
 	lg.InfoD("stopping-process", logger.M{"pid": p.Pid, "grace_period": gracePeriod})
-	if gracePeriod > 0 {
-		// we use SIGTERM so that the subprocess can gracefully exit
-		if err := syscall.Kill(p.Pid, syscall.SIGTERM); err != nil {
-			return fmt.Errorf("unable to send SIGTERM, error: %s", err)
-		}
-		time.Sleep(gracePeriod)
+	if err := p.Signal(os.Signal(syscall.SIGTERM)); err != nil {
+		return fmt.Errorf("unable to send SIGTERM, error: %s", err)
 	}
-	// kill entire group of process spawned by our cmd.Process
-	targetID := p.Pid
-	pgid, err := syscall.Getpgid(p.Pid)
+	timer := time.AfterFunc(gracePeriod, func() {
+		// kill entire group of process spawned by our cmd.Process
+		targetID := p.Pid
+		pgid, err := syscall.Getpgid(p.Pid)
+		if err != nil {
+			lg.InfoD("unable-to-get-pgid", logger.M{"pid": p.Pid})
+		} else {
+			// minus sign required to kill PGIDs
+			// https://linux.die.net/man/2/kill
+			targetID = -pgid
+		}
+		lg.InfoD("killing-pid", logger.M{"pid": p.Pid, "target_id": targetID})
+		if err := syscall.Kill(targetID, syscall.SIGKILL); err != nil {
+			lg.InfoD("unable-to-kill", logger.M{"pid": p.Pid, "target_id": targetID, "error": err.Error()})
+		}
+	})
+	lg.InfoD("waiting-pid", logger.M{"pid": p.Pid})
+	pState, err := p.Wait()
+	timer.Stop()
 	if err != nil {
-		lg.InfoD("unable-to-get-pgid", logger.M{"pid": p.Pid})
-	} else {
-		// minus sign required to kill PGIDs
-		// https://linux.die.net/man/2/kill
-		targetID = -pgid
-	}
-	lg.InfoD("killing-pid", logger.M{"pid": p.Pid, "target_id": targetID})
-	if err := syscall.Kill(targetID, syscall.SIGKILL); err != nil {
-		// The graceful shutdown may have completed, so we don't error in that case.
-		if gracePeriod == 0 || !strings.Contains(err.Error(), "no such process") {
-			return fmt.Errorf("unable to send SIGKILL, error: %s", err)
+		if strings.Contains(err.Error(), "waitid: no child processes") {
+			// process was reaped before the call to Wait(), probably by sigterm handling in run script
+			lg.InfoD("process-exited-outside-of-gearcmd", logger.M{"pid": p.Pid, "code": -1})
+			os.Exit(0)
 		}
+		lg.ErrorD("unknown-wait-err", logger.M{"pid": p.Pid, "wait-err": err.Error()})
+		os.Exit(2)
+	}
+	status := pState.Sys().(syscall.WaitStatus)
+	switch {
+	case status.Exited() && status.ExitStatus() == 0:
+		lg.InfoD("process-exited", logger.M{"pid": p.Pid, "code": status.ExitStatus()})
+		os.Exit(0)
+	case status.Signaled() && status.Signal() == syscall.SIGKILL:
+		lg.ErrorD("process-killed", logger.M{"pid": p.Pid})
+		// Use a distinctive exit code to communicate that the cmd did not
+		// exit after receving SIGTERM
+		os.Exit(2)
+	default:
+		lg.ErrorD("process-in-unknown-state", logger.M{"pid": p.Pid, "state": pState.String()})
+		os.Exit(3)
 	}
 	return nil
 }
