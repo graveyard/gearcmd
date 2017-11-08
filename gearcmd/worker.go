@@ -325,7 +325,9 @@ func stopProcess(p *os.Process, gracePeriod time.Duration) error {
 			targetID = -pgid
 		}
 		lg.InfoD("killing-pid", logger.M{"pid": p.Pid, "target_id": targetID})
-		syscall.Kill(targetID, syscall.SIGKILL)
+		if err := syscall.Kill(targetID, syscall.SIGKILL); err != nil {
+			lg.InfoD("unable-to-kill", logger.M{"pid": p.Pid, "target_id": targetID, "error": err.Error()})
+		}
 	})
 	lg.InfoD("waiting-pid", logger.M{"pid": p.Pid})
 	pState, err := p.Wait()
