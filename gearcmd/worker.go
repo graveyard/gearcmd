@@ -343,7 +343,7 @@ func stopProcess(p *os.Process, gracePeriod time.Duration) error {
 	}
 	status := pState.Sys().(syscall.WaitStatus)
 	switch {
-	case status.Exited() && status.ExitStatus() == 0:
+	case status.Exited():
 		lg.InfoD("process-exited", logger.M{"pid": p.Pid, "code": status.ExitStatus()})
 		os.Exit(0)
 	case status.Signaled() && status.Signal() == syscall.SIGKILL:
