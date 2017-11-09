@@ -52,7 +52,5 @@ release: $(RELEASE_ARTIFACTS)
 clean:
 	rm -rf build release
 
-
-
 install_deps: golang-dep-vendor-deps
 	$(call golang-dep-vendor)
