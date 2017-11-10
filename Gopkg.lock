@@ -7,12 +7,6 @@
   revision = "12684ef3012bf55b9827a6e7c96503e37b0d8379"
 
 [[projects]]
-  name = "github.com/Clever/gearcmd"
-  packages = ["argsparser","baseworker","baseworker/mock","config","gearcmd"]
-  revision = "c24d289add3301528d77948f673eea34f9244e8f"
-  version = "0.8.9"
-
-[[projects]]
   name = "github.com/Clever/gearman-go"
   packages = ["worker"]
   revision = "d6c6bfe9f011021c28ca173d8a4f82faf3607cdf"
@@ -23,12 +17,6 @@
   name = "github.com/facebookgo/clock"
   packages = ["."]
   revision = "600d898af40aa09a7a93ecb9265d87b0504b6f03"
-
-[[projects]]
-  name = "github.com/mikespook/gearman-go"
-  packages = ["common"]
-  revision = "d6c6bfe9f011021c28ca173d8a4f82faf3607cdf"
-  version = "0.1.3"
 
 [[projects]]
   name = "github.com/stretchr/testify"

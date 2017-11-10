@@ -25,11 +25,8 @@
   name = "github.com/Clever/discovery-go"
 
 [[constraint]]
-  name = "github.com/Clever/gearcmd"
-  version = "0.8.9"
-
-[[constraint]]
   name = "github.com/Clever/gearman-go"
+  revision = "234596770d79004b11b5fc521eefa5e5e03f3847"
 
 [[constraint]]
   branch = "master"
