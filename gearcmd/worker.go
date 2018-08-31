@@ -333,7 +333,7 @@ func stopProcess(p *os.Process, gracePeriod time.Duration) error {
 	pState, err := p.Wait()
 	timer.Stop()
 	if err != nil {
-		if strings.Contains(err.Error(), "waitid: no child processes") {
+		if strings.Contains(err.Error(), "wait: no child processes") {
 			// process was reaped before the call to Wait(), probably by sigterm handling in run script
 			lg.InfoD("process-exited-outside-of-gearcmd", logger.M{"pid": p.Pid, "code": -1})
 			os.Exit(0)
