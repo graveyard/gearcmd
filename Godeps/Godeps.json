@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/Clever/gearcmd",
-	"GoVersion": "go1.8",
+	"GoVersion": "go1.10",
 	"GodepVersion": "v79",
 	"Packages": [
 		"github.com/Clever/gearcmd/argsparser",
