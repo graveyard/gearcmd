@@ -248,6 +248,7 @@ func (conf *TaskConfig) doProcess(job baseworker.Job, envVars []string, tryCount
 			return
 		}
 		close(started)
+		job.UpdateStatus(0, 1)
 		// Save the cmdErr. We want to process stdout and stderr before we return it
 		cmdErr := cmd.Wait()
 		stdoutWriter.Close()
